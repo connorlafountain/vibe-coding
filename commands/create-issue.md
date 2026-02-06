@@ -4,13 +4,15 @@ User is mid-development and thought of a bug/feature/improvement. Capture it fas
 
 ## Your Goal
 
-Create a complete issue with:
+Create a complete issue document with:
 - Clear title
 - TL;DR of what this is about
 - Current state vs expected outcome
 - Relevant files that need touching
 - Risk/notes if applicable
 - Proper type/priority/effort labels
+
+Save as: `issues/[brief-slug].md`
 
 ## How to Get There
 
