@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Module Ranking - Vendor Portal{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <h1 class="text-3xl font-bold text-gray-900">Solar Module Ranking Table</h1>
+    <p class="mt-2 text-sm text-gray-700">
+        Select up to 3 modules to shortlist for your project
+    </p>
+
+    {% if project %}
+    <div class="mt-4 bg-blue-50 border-l-4 border-blue-400 p-4">
+        <p class="text-sm text-blue-700">
+            <strong>Current Project:</strong> {{ project.name }}
+            <span class="ml-4"><strong>Status:</strong> {{ project.status }}</span>
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="mt-8 flex flex-col">
+        <div class="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+            <div class="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
+                <div class="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Module
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Manufacturer
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Wattage
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Technology
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Price/W
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Action
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for module in modules %}
+                            <tr class="{% if module.id in shortlisted_ids %}bg-green-50{% endif %}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {{ module.name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ module.manufacturer }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ module.wattage }}W
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ module.technology }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    ${{ "%.3f"|format(module.price_per_watt) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    {% if module.id in shortlisted_ids %}
+                                        <span class="text-green-600">✓ Shortlisted</span>
+                                    {% else %}
+                                        <form method="post" action="/customer/shortlist" class="inline">
+                                            <input type="hidden" name="module_id" value="{{ module.id }}">
+                                            <button type="submit" class="text-blue-600 hover:text-blue-900">
+                                                Add to Shortlist
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if shortlisted_ids|length > 0 %}
+    <div class="mt-6 flex justify-end">
+        <a href="/customer/module-details" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+            Continue to Module Details ({{ shortlisted_ids|length }}/3 selected)
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
