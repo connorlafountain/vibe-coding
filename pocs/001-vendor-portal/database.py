@@ -19,6 +19,8 @@ class Project(Base):
     name = Column(String, nullable=False)
     status = Column(String, default='draft')  # draft, rfq_sent, quotes_received
     created_at = Column(DateTime, default=datetime.utcnow)
+    target_mw = Column(Float, nullable=False, default=100.0)  # Project size in MW
+    delivery_date = Column(String, nullable=False, default='Q3 2026')  # Expected delivery
 
     shortlist = relationship("ProjectShortlist", back_populates="project")
     rfqs = relationship("RFQ", back_populates="project")
@@ -59,6 +61,8 @@ class Vendor(Base):
     contact_name = Column(String, nullable=False)
     email = Column(String, nullable=False)
     phone = Column(String, nullable=False)
+    portal_token = Column(String, unique=True, nullable=False)
+    payment_terms = Column(String, nullable=False, default='Net 30')
 
     rfqs = relationship("RFQ", back_populates="vendor")
 
@@ -69,6 +73,7 @@ class RFQ(Base):
     id = Column(Integer, primary_key=True)
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
     vendor_id = Column(Integer, ForeignKey('vendors.id'), nullable=False)
+    module_id = Column(Integer, ForeignKey('modules.id'), nullable=False)
     token = Column(String, unique=True, nullable=False)
     status = Column(String, default='pending')  # pending, sent, viewed, submitted, declined
     sent_at = Column(DateTime)
@@ -76,6 +81,7 @@ class RFQ(Base):
 
     project = relationship("Project", back_populates="rfqs")
     vendor = relationship("Vendor", back_populates="rfqs")
+    module = relationship("Module")
     quotes = relationship("Quote", back_populates="rfq")
 
 
@@ -87,10 +93,10 @@ class Quote(Base):
     module_id = Column(Integer, ForeignKey('modules.id'), nullable=False)
     price = Column(Float, nullable=False)
     delivery_date = Column(String, nullable=False)
-    availability = Column(String, nullable=False)
     target_quantity = Column(Integer, nullable=False)
     payment_terms = Column(Text, nullable=False)
-    action = Column(String, nullable=False)  # confirm, decline, counter
+    action = Column(String, nullable=False)  # confirm, amendment, decline
+    amendments = Column(Text, nullable=True)  # JSON string of what was changed
     submitted_at = Column(DateTime, default=datetime.utcnow)
 
     rfq = relationship("RFQ", back_populates="quotes")
@@ -164,62 +170,63 @@ def seed_database():
     session.commit()
     print(f"✓ Created {len(modules)} modules")
 
-    # Create 10 fake vendors with funny/cool names
-    vendors_data = [
-        ("SolarCo Distributors", "Jane Smith", "jane@solarco.example", "+1-555-0123"),
-        ("PanelSupply Inc.", "Bob Johnson", "bob@panelsupply.example", "+1-555-0456"),
-        ("SunHarvest Solutions", "Alice Wong", "alice@sunharvest.example", "+1-555-0789"),
-        ("Megawatt Merchants", "Carlos Rodriguez", "carlos@megawatt.example", "+1-555-0111"),
-        ("GigaWatt Traders", "Emma Chen", "emma@gigawatt.example", "+1-555-0222"),
-        ("ElectroSun Wholesale", "David Kim", "david@electrosun.example", "+1-555-0333"),
-        ("BrightPanel Co.", "Sarah Thompson", "sarah@brightpanel.example", "+1-555-0444"),
-        ("WattWorks Distribution", "Michael Brown", "michael@wattworks.example", "+1-555-0555"),
-        ("SolarStack Suppliers", "Lisa Martinez", "lisa@solarstack.example", "+1-555-0666"),
-        ("PowerGrid Distributors", "Tom Anderson", "tom@powergrid.example", "+1-555-0777"),
+    # Create vendors that match module manufacturers (1:1 mapping)
+    # Each manufacturer is essentially a vendor for their own products
+    contact_names = [
+        "James Chen", "Maria Rodriguez", "David Kim", "Sarah Johnson",
+        "Michael Zhang", "Emma Thompson", "Carlos Martinez", "Lisa Wang",
+        "Robert Brown", "Anna Lee", "Thomas Anderson", "Jessica Taylor"
+    ]
+
+    # Standard payment terms for each vendor
+    payment_terms_options = [
+        "Net 30", "Net 45", "50% deposit, 50% on delivery",
+        "Net 60", "Letter of Credit", "Net 30, 2% discount if paid in 10 days",
+        "Net 45, 1.5% discount if paid in 15 days", "Cash on Delivery",
+        "Net 30 from delivery", "50% upfront, 25% on shipment, 25% on delivery",
+        "Net 60 from invoice date", "Net 30 with approved credit"
     ]
 
     vendors = []
-    for name, contact, email, phone in vendors_data:
-        vendor = Vendor(name=name, contact_name=contact, email=email, phone=phone)
+    vendor_map = {}  # Map manufacturer -> vendor for easy lookup
+    for i, manufacturer in enumerate(manufacturers):
+        # Create email-friendly manufacturer name
+        email_name = manufacturer.lower().replace(" ", "").replace("qcells", "qcells")
+        vendor = Vendor(
+            name=manufacturer,
+            contact_name=contact_names[i],
+            email="clafountain@anzarenewables.com",  # All emails go to Connor for POC
+            phone=f"+1-555-{str(i).zfill(4)}",
+            portal_token=str(uuid.uuid4()),  # Unique portal access token per vendor
+            payment_terms=payment_terms_options[i]  # Each vendor has their standard terms
+        )
         vendors.append(vendor)
+        vendor_map[manufacturer] = vendor
 
     session.add_all(vendors)
     session.commit()
-    print(f"✓ Created {len(vendors)} vendors")
+    print(f"✓ Created {len(vendors)} manufacturer-based vendors")
 
     # Create a sample project with 3 shortlisted modules
     project = Project(
         name="Arizona Solar Farm 100MW",
         status="draft",
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
+        target_mw=100.0,  # 100 MW project
+        delivery_date="Q3 2026"  # Expected delivery
     )
     session.add(project)
     session.commit()
     print(f"✓ Created sample project: {project.name}")
 
-    # Add 3 random modules to shortlist
-    shortlisted_modules = random.sample(modules, 3)
-    for module in shortlisted_modules:
-        shortlist = ProjectShortlist(project_id=project.id, module_id=module.id)
-        session.add(shortlist)
-
+    # Don't pre-populate shortlist - let user select their own modules
+    # (This makes testing easier)
     session.commit()
-    print(f"✓ Added {len(shortlisted_modules)} modules to project shortlist")
+    print(f"✓ Project created with empty shortlist (ready for user selection)")
 
-    # Create RFQs for 3 vendors (pending, not sent yet)
-    sample_vendors = random.sample(vendors, 3)
-    for vendor in sample_vendors:
-        rfq = RFQ(
-            project_id=project.id,
-            vendor_id=vendor.id,
-            token=str(uuid.uuid4()),
-            status='pending',
-            expires_at=datetime.utcnow() + timedelta(days=7)
-        )
-        session.add(rfq)
-
-    session.commit()
-    print(f"✓ Created {len(sample_vendors)} RFQs")
+    # Note: RFQs are created when admin clicks "Send RFQs" button
+    # Each RFQ is tied to a specific module and sent to that module's manufacturer
+    print(f"✓ No RFQs created yet (will be created when admin sends bids)")
 
     print("\n✅ Database seeded successfully!")
     session.close()

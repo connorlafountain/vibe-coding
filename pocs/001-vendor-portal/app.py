@@ -127,51 +127,126 @@ async def submit_rfq():
 
 @app.get("/admin/dashboard", response_class=HTMLResponse)
 async def admin_dashboard(request: Request):
-    """SST Admin dashboard - view all RFQs"""
+    """SST Admin dashboard - view all projects and RFQs"""
     db = next(get_db())
-    rfqs = db.query(RFQ).all()
-    project = db.query(Project).first()
+    projects = db.query(Project).all()
+
+    # Get selected project (default to first)
+    selected_project_id = request.query_params.get("project_id")
+    if selected_project_id:
+        project = db.query(Project).filter_by(id=int(selected_project_id)).first()
+    else:
+        project = projects[0] if projects else None
+
+    rfqs = []
+    shortlisted_modules = []
+    if project:
+        rfqs = db.query(RFQ).filter_by(project_id=project.id).all()
+        shortlist = db.query(ProjectShortlist).filter_by(project_id=project.id).all()
+        shortlisted_modules = [s.module for s in shortlist]
 
     return templates.TemplateResponse(
         "sst_admin_dashboard.html",
         {
             "request": request,
+            "projects": projects,
+            "project": project,
             "rfqs": rfqs,
-            "project": project
+            "shortlisted_modules": shortlisted_modules
         }
     )
 
 
-@app.post("/admin/send-bid/{rfq_id}")
-async def send_bid(rfq_id: int):
-    """Send RFQ email to vendor"""
+@app.post("/admin/send-rfqs/{project_id}")
+async def send_rfqs(project_id: int):
+    """Create and send RFQs for all shortlisted modules"""
     db = next(get_db())
-    rfq = db.query(RFQ).filter_by(id=rfq_id).first()
+    project = db.query(Project).filter_by(id=project_id).first()
 
-    if not rfq:
-        raise HTTPException(status_code=404, detail="RFQ not found")
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
-    # Get shortlisted modules for this project
-    shortlist = db.query(ProjectShortlist).filter_by(project_id=rfq.project_id).all()
-    modules = [s.module for s in shortlist]
+    # Get shortlisted modules
+    shortlist = db.query(ProjectShortlist).filter_by(project_id=project.id).all()
 
-    # Send email
-    portal_link = f"http://localhost:8000/vendor/{rfq.token}"
-    success = send_rfq_email(
-        to_email=rfq.vendor.email,
-        vendor_name=rfq.vendor.name,
-        contact_name=rfq.vendor.contact_name,
-        project_name=rfq.project.name,
-        modules=modules,
-        portal_link=portal_link
-    )
+    if not shortlist:
+        raise HTTPException(status_code=400, detail="No modules shortlisted")
 
-    if success:
-        rfq.status = "sent"
-        rfq.sent_at = datetime.utcnow()
+    # For each shortlisted module, create RFQ and send to manufacturer's vendor
+    rfqs_created = 0
+    for item in shortlist:
+        module = item.module
+
+        # Find vendor that matches this module's manufacturer
+        vendor = db.query(Vendor).filter_by(name=module.manufacturer).first()
+
+        if not vendor:
+            print(f"⚠️  No vendor found for manufacturer: {module.manufacturer}")
+            continue
+
+        # Check if RFQ already exists for this combination
+        existing_rfq = db.query(RFQ).filter_by(
+            project_id=project.id,
+            vendor_id=vendor.id,
+            module_id=module.id
+        ).first()
+
+        if existing_rfq:
+            # RFQ already exists, just resend email if pending
+            if existing_rfq.status == 'pending':
+                portal_link = f"http://localhost:8000/vendor/{vendor.portal_token}"
+                send_rfq_email(
+                    to_email=vendor.email,
+                    vendor_name=vendor.name,
+                    contact_name=vendor.contact_name,
+                    project_name=project.name,
+                    module_name=module.name,
+                    module_wattage=module.wattage,
+                    module_manufacturer=module.manufacturer,
+                    portal_link=portal_link
+                )
+                existing_rfq.status = 'sent'
+                existing_rfq.sent_at = datetime.utcnow()
+            continue
+
+        # Create new RFQ
+        rfq = RFQ(
+            project_id=project.id,
+            vendor_id=vendor.id,
+            module_id=module.id,
+            token=str(uuid.uuid4()),
+            status='pending',
+            expires_at=datetime.utcnow() + timedelta(days=7)
+        )
+        db.add(rfq)
         db.commit()
+        db.refresh(rfq)
 
-    return RedirectResponse(url="/admin/dashboard", status_code=303)
+        # Send email with vendor portal link
+        portal_link = f"http://localhost:8000/vendor/{vendor.portal_token}"
+        success = send_rfq_email(
+            to_email=vendor.email,
+            vendor_name=vendor.name,
+            contact_name=vendor.contact_name,
+            project_name=project.name,
+            module_name=module.name,
+            module_wattage=module.wattage,
+            module_manufacturer=module.manufacturer,
+            portal_link=portal_link
+        )
+
+        if success:
+            rfq.status = 'sent'
+            rfq.sent_at = datetime.utcnow()
+            db.commit()
+            rfqs_created += 1
+
+    # Update project status
+    project.status = 'rfqs_sent'
+    db.commit()
+
+    print(f"✅ Created and sent {rfqs_created} RFQs")
+    return RedirectResponse(url=f"/admin/dashboard?project_id={project_id}", status_code=303)
 
 
 @app.get("/admin/quotes", response_class=HTMLResponse)
@@ -193,10 +268,10 @@ async def admin_quotes(request: Request):
             "module_name": quote.module.name,
             "price": quote.price,
             "delivery_date": quote.delivery_date,
-            "availability": quote.availability,
             "target_quantity": quote.target_quantity,
             "payment_terms": quote.payment_terms,
-            "action": quote.action
+            "action": quote.action,
+            "amendments": quote.amendments if quote.amendments else None
         })
 
     return templates.TemplateResponse(
@@ -212,14 +287,41 @@ async def admin_quotes(request: Request):
 
 # ===== VENDOR PORTAL ROUTES =====
 
-@app.get("/vendor/{token}", response_class=HTMLResponse)
-async def vendor_portal(token: str, request: Request):
-    """Vendor portal - view RFQ and submit quote"""
+@app.get("/vendor/{portal_token}", response_class=HTMLResponse)
+async def vendor_dashboard(portal_token: str, request: Request):
+    """Vendor dashboard - view all open RFQs"""
     db = next(get_db())
-    rfq = db.query(RFQ).filter_by(token=token).first()
+    vendor = db.query(Vendor).filter_by(portal_token=portal_token).first()
+
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Invalid vendor portal link")
+
+    # Get all RFQs for this vendor
+    rfqs = db.query(RFQ).filter_by(vendor_id=vendor.id).all()
+
+    return templates.TemplateResponse(
+        "vendor_dashboard.html",
+        {
+            "request": request,
+            "vendor": vendor,
+            "rfqs": rfqs
+        }
+    )
+
+
+@app.get("/vendor/{portal_token}/rfq/{rfq_id}", response_class=HTMLResponse)
+async def vendor_rfq_detail(portal_token: str, rfq_id: int, request: Request):
+    """Vendor RFQ detail - view specific RFQ and submit quote"""
+    db = next(get_db())
+    vendor = db.query(Vendor).filter_by(portal_token=portal_token).first()
+
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Invalid vendor portal link")
+
+    rfq = db.query(RFQ).filter_by(id=rfq_id, vendor_id=vendor.id).first()
 
     if not rfq:
-        raise HTTPException(status_code=404, detail="Invalid or expired token")
+        raise HTTPException(status_code=404, detail="RFQ not found")
 
     # Check if token expired
     if rfq.expires_at and rfq.expires_at < datetime.utcnow():
@@ -230,50 +332,52 @@ async def vendor_portal(token: str, request: Request):
         rfq.status = "viewed"
         db.commit()
 
-    # Get shortlisted modules
-    shortlist = db.query(ProjectShortlist).filter_by(project_id=rfq.project_id).all()
-    modules = [s.module for s in shortlist]
-
     return templates.TemplateResponse(
         "vendor_portal.html",
         {
             "request": request,
             "rfq": rfq,
-            "modules": modules,
+            "module": rfq.module,
             "project": rfq.project,
-            "vendor": rfq.vendor
+            "vendor": vendor,
+            "portal_token": portal_token
         }
     )
 
 
-@app.post("/vendor/{token}/submit")
+@app.post("/vendor/{portal_token}/rfq/{rfq_id}/submit")
 async def submit_quote(
-    token: str,
-    module_id: int = Form(...),
+    portal_token: str,
+    rfq_id: int,
     price: float = Form(...),
     delivery_date: str = Form(...),
-    availability: str = Form(...),
     target_quantity: int = Form(...),
     payment_terms: str = Form(...),
-    action: str = Form(...)
+    action: str = Form(...),
+    amendments: str = Form(default="")
 ):
     """Vendor submits quote"""
     db = next(get_db())
-    rfq = db.query(RFQ).filter_by(token=token).first()
+    vendor = db.query(Vendor).filter_by(portal_token=portal_token).first()
+
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Invalid vendor portal link")
+
+    rfq = db.query(RFQ).filter_by(id=rfq_id, vendor_id=vendor.id).first()
 
     if not rfq:
-        raise HTTPException(status_code=404, detail="Invalid token")
+        raise HTTPException(status_code=404, detail="RFQ not found")
 
     # Create quote
     quote = Quote(
         rfq_id=rfq.id,
-        module_id=module_id,
+        module_id=rfq.module_id,
         price=price,
         delivery_date=delivery_date,
-        availability=availability,
         target_quantity=target_quantity,
         payment_terms=payment_terms,
         action=action,
+        amendments=amendments if amendments else None,
         submitted_at=datetime.utcnow()
     )
 
@@ -281,24 +385,30 @@ async def submit_quote(
     rfq.status = "submitted" if action != "decline" else "declined"
     db.commit()
 
-    return RedirectResponse(url=f"/vendor/{token}/confirmation", status_code=303)
+    return RedirectResponse(url=f"/vendor/{portal_token}/rfq/{rfq_id}/confirmation", status_code=303)
 
 
-@app.get("/vendor/{token}/confirmation", response_class=HTMLResponse)
-async def vendor_confirmation(token: str, request: Request):
+@app.get("/vendor/{portal_token}/rfq/{rfq_id}/confirmation", response_class=HTMLResponse)
+async def vendor_confirmation(portal_token: str, rfq_id: int, request: Request):
     """Thank you page after vendor submits quote"""
     db = next(get_db())
-    rfq = db.query(RFQ).filter_by(token=token).first()
+    vendor = db.query(Vendor).filter_by(portal_token=portal_token).first()
+
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Invalid vendor portal link")
+
+    rfq = db.query(RFQ).filter_by(id=rfq_id, vendor_id=vendor.id).first()
 
     if not rfq:
-        raise HTTPException(status_code=404, detail="Invalid token")
+        raise HTTPException(status_code=404, detail="RFQ not found")
 
     return templates.TemplateResponse(
         "vendor_confirmation.html",
         {
             "request": request,
             "rfq": rfq,
-            "vendor": rfq.vendor
+            "vendor": vendor,
+            "portal_token": portal_token
         }
     )
 

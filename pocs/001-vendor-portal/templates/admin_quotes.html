@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Quote Comparison - Vendor Portal{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Quote Comparison</h1>
+                <p class="mt-2 text-sm text-gray-600">Review and compare vendor responses</p>
+            </div>
+            <a href="/admin/dashboard" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    {% if quotes|length == 0 %}
+    <!-- No Quotes Yet -->
+    <div class="bg-white shadow rounded-lg p-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No quotes submitted yet</h3>
+        <p class="mt-1 text-sm text-gray-500">Vendors haven't submitted any quotes yet. Check back after sending RFQs.</p>
+        <div class="mt-6">
+            <a href="/admin/dashboard" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                Go to Dashboard
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <!-- Quote Summary Cards -->
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Total Quotes</dt>
+                            <dd class="text-3xl font-semibold text-gray-900">{{ quotes|length }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Confirmed</dt>
+                            <dd class="text-3xl font-semibold text-green-600">
+                                {{ quotes|selectattr('action', 'equalto', 'confirm')|list|length }}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5 w-0 flex-1">
+                        <dl>
+                            <dt class="text-sm font-medium text-gray-500 truncate">Counter Offers</dt>
+                            <dd class="text-3xl font-semibold text-yellow-600">
+                                {{ quotes|selectattr('action', 'equalto', 'counter')|list|length }}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quotes Table -->
+    <div class="bg-white shadow rounded-lg overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Vendor Quotes</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Module</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Terms</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amendments</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for quote in quotes %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ quote.rfq.vendor.name }}</div>
+                            <div class="text-sm text-gray-500">{{ quote.rfq.vendor.contact_name }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900">{{ quote.module.name }}</div>
+                            <div class="text-sm text-gray-500">{{ quote.module.manufacturer }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-semibold text-gray-900">${{ "{:,.2f}".format(quote.price) }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ "{:,}".format(quote.target_quantity) }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ quote.delivery_date }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-900 max-w-xs truncate" title="{{ quote.payment_terms }}">
+                                {{ quote.payment_terms }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                {% if quote.action == 'confirm' %}bg-green-100 text-green-800
+                                {% elif quote.action == 'amendment' %}bg-yellow-100 text-yellow-800
+                                {% elif quote.action == 'decline' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ quote.action.title() }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if quote.amendments %}
+                                <div class="text-xs text-gray-600 max-w-xs" title="{{ quote.amendments }}">
+                                    {{ quote.amendments }}
+                                </div>
+                            {% else %}
+                                <span class="text-xs text-gray-400">None</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {{ quote.submitted_at.strftime('%b %d, %Y') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Mock Retool API Integration -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Retool API Integration</h2>
+                    <p class="text-sm text-gray-500 mt-1">Structured JSON payload for downstream systems</p>
+                </div>
+                <button onclick="copyToClipboard()" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+                    </svg>
+                    Copy JSON
+                </button>
+            </div>
+        </div>
+        <div class="p-6 bg-gray-50">
+            <pre id="retoolJson" class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-xs font-mono">{{ retool_data|tojson(indent=2) }}</pre>
+        </div>
+        <div class="px-6 py-4 bg-blue-50 border-t border-blue-100">
+            <div class="flex items-start">
+                <svg class="h-5 w-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <div class="ml-3 text-sm text-blue-700">
+                    <p><strong>Integration Note:</strong> This structured data eliminates manual re-entry. In production, this would be pushed to your Retool dashboard automatically via API webhook.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Section -->
+    {% if quotes|length > 0 %}
+    <div class="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <h3 class="text-sm font-medium text-gray-900 mb-3">Quick Analysis</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+            <div>
+                <p class="font-medium text-gray-900 mb-1">Price Range</p>
+                <p>
+                    Low: ${{ "{:,.2f}".format(quotes|map(attribute='price')|min) }}<br>
+                    High: ${{ "{:,.2f}".format(quotes|map(attribute='price')|max) }}
+                </p>
+            </div>
+            <div>
+                <p class="font-medium text-gray-900 mb-1">Response Rate</p>
+                <p>
+                    {{ rfqs|selectattr('status', 'equalto', 'submitted')|list|length }} of {{ rfqs|length }} vendors responded
+                    ({{ "%.0f"|format((rfqs|selectattr('status', 'equalto', 'submitted')|list|length / rfqs|length * 100) if rfqs|length > 0 else 0) }}%)
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+function copyToClipboard() {
+    const jsonText = document.getElementById('retoolJson').textContent;
+    navigator.clipboard.writeText(jsonText).then(() => {
+        // Show success feedback
+        const button = event.currentTarget;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Copied!';
+        button.classList.add('bg-green-50', 'text-green-700', 'border-green-300');
+
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('bg-green-50', 'text-green-700', 'border-green-300');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        alert('Failed to copy to clipboard');
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

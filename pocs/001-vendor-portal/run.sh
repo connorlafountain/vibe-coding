@@ -7,12 +7,15 @@ echo ""
 # Activate venv
 source ../../venv/bin/activate
 
-# Check if database exists
-if [ ! -f "vendor_portal.db" ]; then
-    echo "📊 Database not found. Creating and seeding..."
-    python database.py
-    echo ""
+# Always start with fresh database (better for testing POC)
+if [ -f "vendor_portal.db" ]; then
+    echo "🗑️  Removing old database..."
+    rm vendor_portal.db
 fi
+
+echo "📊 Creating fresh database with seed data..."
+python database.py
+echo ""
 
 # Start server
 echo "✅ Starting FastAPI server on http://localhost:8000"

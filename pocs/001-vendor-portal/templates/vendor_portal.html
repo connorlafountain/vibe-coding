@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Quote - {{ vendor.name }}{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0 max-w-4xl mx-auto">
+    <!-- Back to Dashboard Link -->
+    <div class="mb-4">
+        <a href="/vendor/{{ portal_token }}" class="inline-flex items-center text-sm text-blue-600 hover:text-blue-500">
+            <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Submit Quote</h1>
+        <p class="mt-2 text-lg text-gray-600">{{ project.name }}</p>
+        <p class="mt-1 text-sm text-gray-500">RFQ from Anza Renewables Strategic Sourcing Team</p>
+    </div>
+
+    <!-- Vendor Info Card -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+        <div class="flex items-start">
+            <svg class="h-6 w-6 text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+            <div class="ml-3">
+                <h2 class="text-lg font-semibold text-blue-900">{{ vendor.name }}</h2>
+                <p class="text-sm text-blue-700 mt-1">
+                    Contact: {{ vendor.contact_name }} | {{ vendor.email }} | {{ vendor.phone }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Details -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Project Details</h2>
+        <div class="grid grid-cols-3 gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Project Name</p>
+                <p class="text-base font-medium text-gray-900">{{ project.name }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Project Size</p>
+                <p class="text-base font-medium text-gray-900">{{ project.target_mw }} MW</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Expected Delivery</p>
+                <p class="text-base font-medium text-gray-900">{{ project.delivery_date }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Module Requested (Pre-populated) -->
+    <div class="bg-white shadow rounded-lg overflow-hidden mb-8">
+        <div class="px-6 py-4 bg-gradient-to-r from-blue-500 to-blue-600">
+            <h2 class="text-lg font-semibold text-white">Module Requested</h2>
+            <p class="text-sm text-blue-100 mt-1">Pre-populated from our catalog</p>
+        </div>
+        <div class="p-6 bg-gray-50">
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <p class="text-sm text-gray-500">Module Name</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ module.name }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Manufacturer</p>
+                    <p class="text-lg font-semibold text-gray-900">{{ module.manufacturer }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Wattage</p>
+                    <p class="text-base font-medium text-gray-900">{{ module.wattage }}W</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Technology</p>
+                    <p class="text-base font-medium text-gray-900">{{ module.technology }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Efficiency</p>
+                    <p class="text-base font-medium text-gray-900">{{ module.efficiency }}%</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Reference Price/Watt</p>
+                    <p class="text-base font-medium text-gray-900">${{ "%.3f"|format(module.price_per_watt) }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calculate default values -->
+    {% set default_price = (module.wattage * module.price_per_watt)|round(2) %}
+    {% set modules_needed = ((project.target_mw * 1000000) / module.wattage)|int %}
+
+    <!-- Quote Submission Form -->
+    <div class="bg-white shadow rounded-lg p-6">
+        <div class="border-b border-gray-200 pb-4 mb-6">
+            <h2 class="text-lg font-semibold text-gray-900">Your Quote</h2>
+            <p class="text-sm text-gray-500 mt-1">Review and accept, or make amendments to the pre-filled values below</p>
+        </div>
+
+        <form method="POST" action="/vendor/{{ portal_token }}/rfq/{{ rfq.id }}/submit" id="quoteForm" class="space-y-6">
+            <!-- Price per Module -->
+            <div>
+                <label for="price" class="block text-sm font-medium text-gray-700">
+                    Price per Module (USD) <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-1 relative rounded-md shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 sm:text-sm">$</span>
+                    </div>
+                    <input type="number" step="0.01" name="price" id="price" required
+                           value="{{ default_price }}"
+                           data-original="{{ default_price }}"
+                           class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md">
+                </div>
+                <p class="mt-1 text-sm text-gray-500">Pre-filled from catalog: ${{ default_price }} ({{ module.wattage }}W × ${{ "%.3f"|format(module.price_per_watt) }}/W)</p>
+            </div>
+
+            <!-- Target Quantity -->
+            <div>
+                <label for="target_quantity" class="block text-sm font-medium text-gray-700">
+                    Target Quantity <span class="text-red-500">*</span>
+                </label>
+                <input type="number" name="target_quantity" id="target_quantity" required
+                       value="{{ modules_needed }}"
+                       data-original="{{ modules_needed }}"
+                       class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                <p class="mt-1 text-sm text-gray-500">Calculated for {{ project.target_mw }} MW project ({{ "{:,}".format(modules_needed) }} modules)</p>
+            </div>
+
+            <!-- Delivery Date -->
+            <div>
+                <label for="delivery_date" class="block text-sm font-medium text-gray-700">
+                    Delivery Date <span class="text-red-500">*</span>
+                </label>
+                <input type="text" name="delivery_date" id="delivery_date" required
+                       value="{{ project.delivery_date }}"
+                       data-original="{{ project.delivery_date }}"
+                       class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                <p class="mt-1 text-sm text-gray-500">Pre-filled from project requirements</p>
+            </div>
+
+            <!-- Payment Terms -->
+            <div>
+                <label for="payment_terms" class="block text-sm font-medium text-gray-700">
+                    Payment Terms <span class="text-red-500">*</span>
+                </label>
+                <textarea name="payment_terms" id="payment_terms" rows="2" required
+                          data-original="{{ vendor.payment_terms }}"
+                          class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">{{ vendor.payment_terms }}</textarea>
+                <p class="mt-1 text-sm text-gray-500">Pre-filled with your standard terms</p>
+            </div>
+
+            <!-- Action (hidden, controlled by JS) -->
+            <input type="hidden" name="action" id="action" value="confirm">
+
+            <!-- Amendment Tracking (hidden) -->
+            <input type="hidden" name="amendments" id="amendments" value="">
+
+            <!-- Status Indicator -->
+            <div id="status-indicator" class="p-4 rounded-md bg-green-50 border border-green-200">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-green-800" id="status-title">Confirming Quote as Proposed</h3>
+                        <p class="mt-1 text-sm text-green-700" id="status-message">
+                            All values match our proposal. This will be submitted as a confirmation.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Decline Option -->
+            <div class="pt-4 border-t border-gray-200">
+                <label class="flex items-center">
+                    <input type="checkbox" id="decline-checkbox" class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                    <span class="ml-2 text-sm text-gray-700">I cannot fulfill this RFQ (Decline)</span>
+                </label>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-5 border-t border-gray-200">
+                <div class="flex justify-between items-center">
+                    <a href="/vendor/{{ portal_token }}" class="text-sm text-gray-600 hover:text-gray-900">
+                        ← Cancel and return to dashboard
+                    </a>
+                    <button type="submit" id="submit-btn" class="inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <span id="submit-text">Confirm Quote</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Footer Note -->
+    <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <p class="text-xs text-gray-600">
+            <strong>Note:</strong> If you modify any pre-filled values, your submission will be marked as an "Amendment" for SST review.
+        </p>
+    </div>
+</div>
+
+<script>
+// Track changes and automatically switch to amendment mode
+const form = document.getElementById('quoteForm');
+const priceInput = document.getElementById('price');
+const quantityInput = document.getElementById('target_quantity');
+const deliveryInput = document.getElementById('delivery_date');
+const paymentInput = document.getElementById('payment_terms');
+const actionInput = document.getElementById('action');
+const amendmentsInput = document.getElementById('amendments');
+const declineCheckbox = document.getElementById('decline-checkbox');
+const statusIndicator = document.getElementById('status-indicator');
+const statusTitle = document.getElementById('status-title');
+const statusMessage = document.getElementById('status-message');
+const submitBtn = document.getElementById('submit-btn');
+const submitText = document.getElementById('submit-text');
+
+function checkForChanges() {
+    if (declineCheckbox.checked) {
+        actionInput.value = 'decline';
+        statusIndicator.className = 'p-4 rounded-md bg-red-50 border border-red-200';
+        statusIndicator.querySelector('svg').className = 'h-5 w-5 text-red-400';
+        statusTitle.textContent = 'Declining RFQ';
+        statusTitle.className = 'text-sm font-medium text-red-800';
+        statusMessage.textContent = 'You are declining this RFQ.';
+        statusMessage.className = 'mt-1 text-sm text-red-700';
+        submitText.textContent = 'Submit Decline';
+        submitBtn.className = 'inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500';
+        return;
+    }
+
+    const changes = [];
+
+    if (parseFloat(priceInput.value) !== parseFloat(priceInput.dataset.original)) {
+        changes.push(`Price: $${priceInput.dataset.original} → $${priceInput.value}`);
+    }
+
+    if (parseInt(quantityInput.value) !== parseInt(quantityInput.dataset.original)) {
+        changes.push(`Quantity: ${quantityInput.dataset.original} → ${quantityInput.value}`);
+    }
+
+    if (deliveryInput.value !== deliveryInput.dataset.original) {
+        changes.push(`Delivery: ${deliveryInput.dataset.original} → ${deliveryInput.value}`);
+    }
+
+    if (paymentInput.value.trim() !== paymentInput.dataset.original.trim()) {
+        changes.push(`Payment Terms Modified`);
+    }
+
+    if (changes.length > 0) {
+        // Amendment mode
+        actionInput.value = 'amendment';
+        amendmentsInput.value = changes.join('; ');
+        statusIndicator.className = 'p-4 rounded-md bg-yellow-50 border border-yellow-200';
+        statusIndicator.querySelector('svg').className = 'h-5 w-5 text-yellow-400';
+        statusTitle.textContent = 'Submitting as Amendment';
+        statusTitle.className = 'text-sm font-medium text-yellow-800';
+        statusMessage.textContent = 'You modified: ' + changes.join(', ');
+        statusMessage.className = 'mt-1 text-sm text-yellow-700';
+        submitText.textContent = 'Submit Amendment';
+        submitBtn.className = 'inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500';
+    } else {
+        // Confirm mode
+        actionInput.value = 'confirm';
+        amendmentsInput.value = '';
+        statusIndicator.className = 'p-4 rounded-md bg-green-50 border border-green-200';
+        statusIndicator.querySelector('svg').className = 'h-5 w-5 text-green-400';
+        statusTitle.textContent = 'Confirming Quote as Proposed';
+        statusTitle.className = 'text-sm font-medium text-green-800';
+        statusMessage.textContent = 'All values match our proposal. This will be submitted as a confirmation.';
+        statusMessage.className = 'mt-1 text-sm text-green-700';
+        submitText.textContent = 'Confirm Quote';
+        submitBtn.className = 'inline-flex justify-center py-3 px-6 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500';
+    }
+}
+
+// Attach change listeners
+priceInput.addEventListener('input', checkForChanges);
+quantityInput.addEventListener('input', checkForChanges);
+deliveryInput.addEventListener('input', checkForChanges);
+paymentInput.addEventListener('input', checkForChanges);
+declineCheckbox.addEventListener('change', checkForChanges);
+
+// Initial check
+checkForChanges();
+</script>
+{% endblock %}

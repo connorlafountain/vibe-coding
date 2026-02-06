@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Vendor Portal{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">SST Admin Dashboard</h1>
+        <p class="mt-2 text-sm text-gray-600">Manage projects, RFQs, and vendor communications</p>
+    </div>
+
+    <!-- Project Selector -->
+    {% if projects|length > 0 %}
+    <div class="mb-6">
+        <label for="project-select" class="block text-sm font-medium text-gray-700 mb-2">Select Project</label>
+        <select id="project-select" onchange="window.location.href='/admin/dashboard?project_id=' + this.value" class="block w-full max-w-md pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md">
+            {% for proj in projects %}
+            <option value="{{ proj.id }}" {% if project and proj.id == project.id %}selected{% endif %}>
+                {{ proj.name }} ({{ proj.status.replace('_', ' ').title() }})
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    {% if project %}
+    <!-- Project Overview Card -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <h2 class="text-lg font-semibold text-gray-900 mb-2">Current Project</h2>
+                <p class="text-2xl font-bold text-blue-600">{{ project.name }}</p>
+                <p class="text-sm text-gray-500 mt-1">Created: {{ project.created_at.strftime('%B %d, %Y') }}</p>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                    {% if project.status == 'rfqs_sent' %}bg-blue-100 text-blue-800
+                    {% elif project.status == 'rfq_submitted' %}bg-green-100 text-green-800
+                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                    {{ project.status.replace('_', ' ').title() }}
+                </span>
+                {% if shortlisted_modules|length > 0 and project.status != 'rfqs_sent' %}
+                <form method="POST" action="/admin/send-rfqs/{{ project.id }}" class="mt-3">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                        <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        Send RFQs to Vendors
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Project Metrics -->
+        {% if shortlisted_modules|length > 0 %}
+        <div class="mt-6 pt-6 border-t border-gray-200">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Project Metrics</h3>
+            <div class="grid grid-cols-4 gap-4">
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600">Shortlisted Modules</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ shortlisted_modules|length }}</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600">RFQs Sent</p>
+                    <p class="text-2xl font-bold text-green-600">
+                        {{ rfqs|selectattr('status', 'in', ['sent', 'viewed', 'submitted', 'declined'])|list|length }}
+                    </p>
+                </div>
+                <div class="bg-yellow-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600">Awaiting Response</p>
+                    <p class="text-2xl font-bold text-yellow-600">
+                        {{ rfqs|selectattr('status', 'in', ['sent', 'viewed'])|list|length }}
+                    </p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-600">Quotes Received</p>
+                    <p class="text-2xl font-bold text-purple-600">
+                        {{ rfqs|selectattr('status', 'equalto', 'submitted')|list|length }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Shortlisted Modules -->
+    {% if shortlisted_modules|length > 0 %}
+    <div class="bg-white shadow rounded-lg overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Shortlisted Modules</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Module</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manufacturer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wattage</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RFQ Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for module in shortlisted_modules %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900">{{ module.name }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ module.manufacturer }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ module.wattage }}W</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% set module_rfq = rfqs|selectattr('module_id', 'equalto', module.id)|first %}
+                            {% if module_rfq %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                    {% if module_rfq.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                    {% elif module_rfq.status == 'sent' %}bg-blue-100 text-blue-800
+                                    {% elif module_rfq.status == 'viewed' %}bg-purple-100 text-purple-800
+                                    {% elif module_rfq.status == 'submitted' %}bg-green-100 text-green-800
+                                    {% elif module_rfq.status == 'declined' %}bg-red-100 text-red-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ module_rfq.status.title() }}
+                                </span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                    Not Sent
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+        <div class="flex">
+            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">No modules shortlisted</h3>
+                <p class="mt-2 text-sm text-yellow-700">
+                    This project doesn't have any shortlisted modules yet. Customers need to select modules first.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- RFQ Management Table -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-900">RFQ Management</h2>
+            <a href="/admin/quotes" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                View All Quotes →
+            </a>
+        </div>
+
+        {% if rfqs|length == 0 %}
+        <div class="p-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No RFQs created yet</h3>
+            <p class="mt-1 text-sm text-gray-500">Click "Send RFQs to Vendors" to create and send RFQs for shortlisted modules.</p>
+        </div>
+        {% else %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor/Module</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for rfq in rfqs %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-gray-900">{{ rfq.vendor.name }}</div>
+                            <div class="text-sm text-gray-500">{{ rfq.module.name }} ({{ rfq.module.wattage }}W)</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ rfq.vendor.contact_name }}</div>
+                            <div class="text-sm text-gray-500">{{ rfq.vendor.email }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                {% if rfq.status == 'pending' %}bg-yellow-100 text-yellow-800
+                                {% elif rfq.status == 'sent' %}bg-blue-100 text-blue-800
+                                {% elif rfq.status == 'viewed' %}bg-purple-100 text-purple-800
+                                {% elif rfq.status == 'submitted' %}bg-green-100 text-green-800
+                                {% elif rfq.status == 'declined' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ rfq.status.title() }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {% if rfq.sent_at %}
+                                {{ rfq.sent_at.strftime('%b %d, %Y') }}
+                            {% else %}
+                                <span class="text-gray-400">Not sent</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            {% if rfq.status == 'submitted' %}
+                            <a href="/admin/quotes" class="text-green-600 hover:text-green-900">
+                                View Quote
+                            </a>
+                            {% elif rfq.status == 'declined' %}
+                            <span class="text-red-600">Declined</span>
+                            {% else %}
+                            <a href="/vendor/{{ rfq.vendor.portal_token }}" target="_blank" class="text-blue-600 hover:text-blue-900" title="Open vendor portal">
+                                Vendor Portal →
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <!-- No Project Selected -->
+    <div class="bg-white shadow rounded-lg p-12 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No projects found</h3>
+        <p class="mt-1 text-sm text-gray-500">Create a project from the customer interface to get started.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

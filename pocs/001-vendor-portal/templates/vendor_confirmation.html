@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Quote Submitted - Thank You{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0 max-w-3xl mx-auto">
+    <!-- Back to Dashboard Link -->
+    <div class="mb-4">
+        <a href="/vendor/{{ portal_token }}" class="inline-flex items-center text-sm text-blue-600 hover:text-blue-500">
+            <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Success Message -->
+    <div class="text-center py-12">
+        <!-- Success Icon -->
+        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
+            <svg class="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+
+        <!-- Title -->
+        <h1 class="mt-6 text-3xl font-bold text-gray-900">Quote Successfully Submitted!</h1>
+        <p class="mt-3 text-lg text-gray-600">Thank you for your response</p>
+    </div>
+
+    <!-- Confirmation Details -->
+    <div class="bg-white shadow rounded-lg p-8 mb-8">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Submission Confirmation</h2>
+
+        <div class="space-y-4">
+            <div class="flex justify-between py-3 border-b border-gray-200">
+                <span class="text-sm font-medium text-gray-500">Vendor</span>
+                <span class="text-sm font-semibold text-gray-900">{{ vendor.name }}</span>
+            </div>
+            <div class="flex justify-between py-3 border-b border-gray-200">
+                <span class="text-sm font-medium text-gray-500">Contact</span>
+                <span class="text-sm font-semibold text-gray-900">{{ vendor.contact_name }}</span>
+            </div>
+            <div class="flex justify-between py-3 border-b border-gray-200">
+                <span class="text-sm font-medium text-gray-500">Project</span>
+                <span class="text-sm font-semibold text-gray-900">{{ rfq.project.name }}</span>
+            </div>
+            <div class="flex justify-between py-3 border-b border-gray-200">
+                <span class="text-sm font-medium text-gray-500">RFQ Status</span>
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    Submitted
+                </span>
+            </div>
+            <div class="flex justify-between py-3">
+                <span class="text-sm font-medium text-gray-500">Submission Date</span>
+                <span class="text-sm font-semibold text-gray-900">{{ rfq.sent_at.strftime('%B %d, %Y at %I:%M %p') if rfq.sent_at else 'N/A' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- What Happens Next -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-900">What happens next?</h3>
+                <div class="mt-2 text-sm text-blue-800">
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Your quote has been received by the Anza Renewables Strategic Sourcing Team</li>
+                        <li>The SST will review all vendor responses and compare quotes</li>
+                        <li>You will be contacted directly if your quote is selected</li>
+                        <li>If additional information is needed, we will reach out via email or phone</li>
+                        <li>Thank you for participating in this RFQ process</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="bg-white shadow rounded-lg p-6 mb-8">
+        <h3 class="text-sm font-medium text-gray-900 mb-3">Questions or Need to Update Your Quote?</h3>
+        <p class="text-sm text-gray-600 mb-4">
+            If you need to make changes to your submission or have questions about this RFQ, please contact the Strategic Sourcing Team:
+        </p>
+        <div class="bg-gray-50 rounded-md p-4">
+            <p class="text-sm text-gray-900">
+                <strong>Anza Renewables Strategic Sourcing Team</strong><br>
+                Email: <a href="mailto:sourcing@anzarenewables.example" class="text-blue-600 hover:text-blue-500">sourcing@anzarenewables.example</a><br>
+                Phone: +1-555-ANZA-SST
+            </p>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex justify-center space-x-4 pb-12">
+        <a href="/vendor/{{ portal_token }}" class="inline-flex items-center px-6 py-3 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Return to Dashboard
+        </a>
+    </div>
+
+    <!-- Reference Number -->
+    <div class="text-center pb-8">
+        <p class="text-xs text-gray-500">
+            Reference ID: <span class="font-mono">{{ rfq.token[:8].upper() }}</span>
+        </p>
+    </div>
+</div>
+
+<!-- Confetti Animation (Optional) -->
+<style>
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.6s ease-out;
+}
+</style>
+
+<script>
+// Add fade-in animation on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const content = document.querySelector('main > div');
+    if (content) {
+        content.classList.add('animate-fadeIn');
+    }
+});
+</script>
+{% endblock %}
