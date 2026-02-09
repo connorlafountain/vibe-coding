@@ -157,6 +157,46 @@ async def admin_dashboard(request: Request):
     )
 
 
+@app.post("/admin/project/{project_id}/update")
+async def update_project(
+    project_id: int,
+    target_mw: float = Form(...),
+    delivery_date: str = Form(...)
+):
+    """Update project parameters"""
+    db = next(get_db())
+    project = db.query(Project).filter_by(id=project_id).first()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.target_mw = target_mw
+    project.delivery_date = delivery_date
+    db.commit()
+
+    return RedirectResponse(url=f"/admin/dashboard?project_id={project_id}", status_code=303)
+
+
+@app.post("/admin/module/{module_id}/update")
+async def update_module_catalog(
+    module_id: int,
+    price_per_watt: float = Form(...)
+):
+    """Update module catalog pricing"""
+    db = next(get_db())
+    module = db.query(Module).filter_by(id=module_id).first()
+
+    if not module:
+        raise HTTPException(status_code=404, detail="Module not found")
+
+    module.price_per_watt = price_per_watt
+    db.commit()
+
+    # Get the project_id from referrer or use default
+    # For simplicity, redirect to dashboard
+    return RedirectResponse(url="/admin/dashboard", status_code=303)
+
+
 @app.post("/admin/send-rfqs/{project_id}")
 async def send_rfqs(project_id: int):
     """Create and send RFQs for all shortlisted modules"""

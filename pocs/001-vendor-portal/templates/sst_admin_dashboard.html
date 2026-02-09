@@ -29,9 +29,20 @@
     <div class="bg-white shadow rounded-lg p-6 mb-6">
         <div class="flex justify-between items-start">
             <div class="flex-1">
-                <h2 class="text-lg font-semibold text-gray-900 mb-2">Current Project</h2>
+                <div class="flex items-center gap-3 mb-2">
+                    <h2 class="text-lg font-semibold text-gray-900">Current Project</h2>
+                    <button onclick="openEditProjectModal()" class="text-blue-600 hover:text-blue-700" title="Edit Project">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                    </button>
+                </div>
                 <p class="text-2xl font-bold text-blue-600">{{ project.name }}</p>
-                <p class="text-sm text-gray-500 mt-1">Created: {{ project.created_at.strftime('%B %d, %Y') }}</p>
+                <div class="mt-2 text-sm text-gray-600 space-y-1">
+                    <p>Target: <span class="font-medium">{{ project.target_mw }} MW</span></p>
+                    <p>Delivery: <span class="font-medium">{{ project.delivery_date }}</span></p>
+                    <p class="text-gray-500">Created: {{ project.created_at.strftime('%B %d, %Y') }}</p>
+                </div>
             </div>
             <div class="flex flex-col items-end">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
@@ -98,7 +109,9 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Module</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Manufacturer</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wattage</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price/Watt</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RFQ Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -112,6 +125,9 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">{{ module.wattage }}W</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">${{ "%.3f"|format(module.price_per_watt) }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% set module_rfq = rfqs|selectattr('module_id', 'equalto', module.id)|first %}
@@ -130,6 +146,13 @@
                                     Not Sent
                                 </span>
                             {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <button onclick="openEditModuleModal({{ module.id }}, '{{ module.name }}', {{ module.price_per_watt }})" class="text-blue-600 hover:text-blue-900" title="Edit catalog price">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -241,5 +264,121 @@
         <p class="mt-1 text-sm text-gray-500">Create a project from the customer interface to get started.</p>
     </div>
     {% endif %}
+
+    <!-- Edit Project Modal -->
+    <div id="editProjectModal" class="hidden fixed z-10 inset-0 overflow-y-auto">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <form method="POST" action="/admin/project/{{ project.id if project else 0 }}/update">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Edit Project Parameters</h3>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label for="target_mw" class="block text-sm font-medium text-gray-700">Target MW</label>
+                                <input type="number" step="0.1" name="target_mw" id="target_mw" required
+                                       value="{{ project.target_mw if project else 100 }}"
+                                       class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                            </div>
+
+                            <div>
+                                <label for="delivery_date" class="block text-sm font-medium text-gray-700">Delivery Date</label>
+                                <input type="text" name="delivery_date" id="delivery_date" required
+                                       value="{{ project.delivery_date if project else 'Q3 2026' }}"
+                                       class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                       placeholder="e.g., Q3 2026">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                            Save Changes
+                        </button>
+                        <button type="button" onclick="closeEditProjectModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Module Modal -->
+    <div id="editModuleModal" class="hidden fixed z-10 inset-0 overflow-y-auto">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <form method="POST" id="editModuleForm">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Edit Module Catalog Price</h3>
+
+                        <div class="mb-4">
+                            <p class="text-sm text-gray-600">Module: <span id="moduleName" class="font-medium text-gray-900"></span></p>
+                        </div>
+
+                        <div>
+                            <label for="price_per_watt" class="block text-sm font-medium text-gray-700">Price per Watt (USD)</label>
+                            <div class="mt-1 relative rounded-md shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-sm">$</span>
+                                </div>
+                                <input type="number" step="0.001" name="price_per_watt" id="price_per_watt" required
+                                       class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md"
+                                       placeholder="0.300">
+                            </div>
+                            <p class="mt-1 text-sm text-gray-500">This updates the catalog price for all future RFQs using this module.</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                            Update Catalog Price
+                        </button>
+                        <button type="button" onclick="closeEditModuleModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+// Edit Project Modal
+function openEditProjectModal() {
+    document.getElementById('editProjectModal').classList.remove('hidden');
+}
+
+function closeEditProjectModal() {
+    document.getElementById('editProjectModal').classList.add('hidden');
+}
+
+// Edit Module Modal
+function openEditModuleModal(moduleId, moduleName, currentPrice) {
+    const modal = document.getElementById('editModuleModal');
+    const form = document.getElementById('editModuleForm');
+
+    // Update form action
+    form.action = `/admin/module/${moduleId}/update`;
+
+    // Update display
+    document.getElementById('moduleName').textContent = moduleName;
+    document.getElementById('price_per_watt').value = currentPrice.toFixed(3);
+
+    modal.classList.remove('hidden');
+}
+
+function closeEditModuleModal() {
+    document.getElementById('editModuleModal').classList.add('hidden');
+}
+
+// Close modals on escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeEditProjectModal();
+        closeEditModuleModal();
+    }
+});
+</script>
 {% endblock %}
