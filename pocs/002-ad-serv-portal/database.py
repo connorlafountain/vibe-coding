@@ -6,6 +6,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 import uuid
+import json
+from pathlib import Path
 
 # Database setup
 DATABASE_URL = "sqlite:///./advisory_services.db"
@@ -359,12 +361,66 @@ def seed_database():
     for m in milestones_p6:
         db.add(m)
 
+    # ===== GENERATE TEST RESULTS WITH PLOTS =====
+    # Load sample commissioning data and generate plots for projects in testing phase
+    sample_file = Path("inputs/IHI Commissioning Plot Script/IHI Results_299 Farm preliminary_Kc_PG 10122022.xlsx")
+
+    if sample_file.exists():
+        print("\n📊 Generating test results and interactive plots...")
+        from plot_generator import generate_plots_from_file
+
+        # Generate plots for completed project (Project 1 - Maple Street)
+        try:
+            result = generate_plots_from_file(str(sample_file), project1.id)
+            test_result1 = TestResult(
+                project_id=project1.id,
+                filename="IHI Commissioning Results - Maple Street.xlsx",
+                file_path=str(sample_file),
+                test_type=result["test_type"],
+                plot_paths=json.dumps(result["plots"])
+            )
+            db.add(test_result1)
+            print(f"   ✅ Generated {len(result['plots'])} plots for {project1.name}")
+        except Exception as e:
+            print(f"   ⚠️  Could not generate plots for {project1.name}: {e}")
+
+        # Generate plots for testing project (Project 2 - Riverside)
+        try:
+            result = generate_plots_from_file(str(sample_file), project2.id)
+            test_result2 = TestResult(
+                project_id=project2.id,
+                filename="IHI Commissioning Results - Riverside.xlsx",
+                file_path=str(sample_file),
+                test_type=result["test_type"],
+                plot_paths=json.dumps(result["plots"])
+            )
+            db.add(test_result2)
+            print(f"   ✅ Generated {len(result['plots'])} plots for {project2.name}")
+        except Exception as e:
+            print(f"   ⚠️  Could not generate plots for {project2.name}: {e}")
+
+        # Generate plots for testing project (Project 5 - Coastal Storage)
+        try:
+            result = generate_plots_from_file(str(sample_file), project5.id)
+            test_result5 = TestResult(
+                project_id=project5.id,
+                filename="IHI Commissioning Results - Coastal.xlsx",
+                file_path=str(sample_file),
+                test_type=result["test_type"],
+                plot_paths=json.dumps(result["plots"])
+            )
+            db.add(test_result5)
+            print(f"   ✅ Generated {len(result['plots'])} plots for {project5.name}")
+        except Exception as e:
+            print(f"   ⚠️  Could not generate plots for {project5.name}: {e}")
+
     db.commit()
 
-    print("✅ Database seeded successfully!")
+    print("\n✅ Database seeded successfully!")
     print(f"   - {db.query(Customer).count()} customers")
     print(f"   - {db.query(Project).count()} projects")
     print(f"   - {db.query(Milestone).count()} milestones")
+    print(f"   - {db.query(TestResult).count()} test results with interactive plots")
     print("\n📊 Portal Access URLs:")
     print("   - Acme Solar: http://localhost:8000/customer/acme-solar-2024")
     print("   - GreenTech Energy: http://localhost:8000/customer/greentech-energy-2024")

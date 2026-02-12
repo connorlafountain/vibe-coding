@@ -1,16 +1,12 @@
 """
 Advisory Services Portal POC - FastAPI Application
 """
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy.orm import Session
+from fastapi.responses import HTMLResponse
 from database import get_session, Customer, Project, Milestone, TestResult
-from plot_generator import generate_plots_from_file, UPLOAD_DIR
 import json
-import shutil
-from pathlib import Path
 
 app = FastAPI(title="Advisory Services Portal POC")
 
@@ -116,64 +112,6 @@ async def project_detail(portal_token: str, project_id: int, request: Request):
             "progress": progress,
             "test_results": test_results
         }
-    )
-
-
-@app.post("/customer/{portal_token}/project/{project_id}/upload")
-async def upload_test_data(
-    portal_token: str,
-    project_id: int,
-    file: UploadFile = File(...)
-):
-    """Upload IHI test data and generate plots"""
-    db = next(get_db())
-    customer = db.query(Customer).filter_by(portal_token=portal_token).first()
-
-    if not customer:
-        raise HTTPException(status_code=404, detail="Invalid portal link")
-
-    project = db.query(Project).filter_by(id=project_id, customer_id=customer.id).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # Validate file type
-    if not file.filename.endswith(('.xlsx', '.xls')):
-        raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are supported")
-
-    # Save uploaded file
-    upload_path = UPLOAD_DIR / f"project_{project_id}_{file.filename}"
-    with upload_path.open("wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # Generate plots
-    try:
-        result = generate_plots_from_file(str(upload_path), project_id)
-
-        # Save test result to database
-        # plot_paths now stores the plot data (list of {'title': ..., 'html': ...} dicts)
-        test_result = TestResult(
-            project_id=project_id,
-            filename=file.filename,
-            file_path=str(upload_path),
-            test_type=result["test_type"],
-            plot_paths=json.dumps(result["plots"])  # Store plot HTML data as JSON
-        )
-        db.add(test_result)
-        db.commit()
-
-        print(f"✅ Generated {len(result['plots'])} interactive plots for project {project_id}")
-
-    except Exception as e:
-        print(f"❌ Error generating plots: {e}")
-        import traceback
-        traceback.print_exc()
-        # Still redirect back, but plots won't show
-        pass
-
-    return RedirectResponse(
-        url=f"/customer/{portal_token}/project/{project_id}",
-        status_code=303
     )
 
 
