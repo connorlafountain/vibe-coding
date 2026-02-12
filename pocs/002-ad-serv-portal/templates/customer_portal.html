@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.name }} - Projects{% endblock %}
+
+{% block header_actions %}
+<div class="flex items-center space-x-3">
+    <div class="text-right">
+        <p class="text-sm font-medium text-gray-900">{{ customer.contact_name }}</p>
+        <p class="text-xs text-gray-500">{{ customer.name }}</p>
+    </div>
+    <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+        <span class="text-blue-600 font-semibold text-sm">{{ customer.contact_name[0] if customer.contact_name else 'C' }}</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="animate-fadeIn">
+    <!-- Header Section -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Your Projects</h1>
+        <p class="mt-2 text-gray-600">Track the status and progress of your battery storage installations</p>
+    </div>
+
+    <!-- Project Stats Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {% set total_projects = projects_data|length %}
+        {% set active_projects = projects_data|selectattr('project.status', 'in', ['in_progress', 'testing'])|list|length %}
+        {% set completed_projects = projects_data|selectattr('project.status', 'equalto', 'complete')|list|length %}
+        {% set planning_projects = projects_data|selectattr('project.status', 'equalto', 'planning')|list|length %}
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Total Projects</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ total_projects }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Active</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ active_projects }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Completed</p>
+                    <p class="text-2xl font-bold text-green-600">{{ completed_projects }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500">Planning</p>
+                    <p class="text-2xl font-bold text-gray-600">{{ planning_projects }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects List -->
+    <div class="space-y-6">
+        {% for data in projects_data %}
+        {% set project = data.project %}
+        {% set progress = data.progress %}
+        <div class="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+            <div class="p-6">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3">
+                            <h3 class="text-xl font-semibold text-gray-900">{{ project.name }}</h3>
+                            {% if project.status == 'complete' %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Complete</span>
+                            {% elif project.status == 'testing' %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Testing</span>
+                            {% elif project.status == 'in_progress' %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">In Progress</span>
+                            {% elif project.status == 'planning' %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Planning</span>
+                            {% elif project.status == 'blocked' %}
+                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Blocked</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-3 gap-4 text-sm">
+                            <div>
+                                <p class="text-gray-500">Location</p>
+                                <p class="font-medium text-gray-900 mt-1">{{ project.location }}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Capacity</p>
+                                <p class="font-medium text-gray-900 mt-1">{{ project.capacity }}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Expected Completion</p>
+                                <p class="font-medium text-gray-900 mt-1">{{ project.expected_completion }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="mt-4">
+                            <div class="flex items-center justify-between text-sm mb-2">
+                                <span class="text-gray-600">Progress</span>
+                                <span class="font-medium text-gray-900">{{ progress }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: {{ progress }}%"></div>
+                            </div>
+                            <div class="mt-2 text-xs text-gray-500">
+                                {{ data.completed_milestones }} of {{ data.total_milestones }} milestones completed
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View Details Button -->
+                    <a href="/customer/{{ portal_token }}/project/{{ project.id }}"
+                       class="ml-6 inline-flex items-center px-4 py-2 border border-blue-600 rounded-md shadow-sm text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        View Details
+                        <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not projects_data %}
+        <div class="bg-white rounded-lg shadow p-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <h3 class="mt-4 text-lg font-medium text-gray-900">No projects yet</h3>
+            <p class="mt-2 text-gray-500">Your projects will appear here once they're created.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
