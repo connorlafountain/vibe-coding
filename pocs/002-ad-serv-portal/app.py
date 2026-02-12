@@ -151,17 +151,18 @@ async def upload_test_data(
         result = generate_plots_from_file(str(upload_path), project_id)
 
         # Save test result to database
+        # plot_paths now stores the plot data (list of {'title': ..., 'html': ...} dicts)
         test_result = TestResult(
             project_id=project_id,
             filename=file.filename,
             file_path=str(upload_path),
             test_type=result["test_type"],
-            plot_paths=json.dumps(result["plot_paths"])
+            plot_paths=json.dumps(result["plots"])  # Store plot HTML data as JSON
         )
         db.add(test_result)
         db.commit()
 
-        print(f"✅ Generated {len(result['plot_paths'])} plots for project {project_id}")
+        print(f"✅ Generated {len(result['plots'])} interactive plots for project {project_id}")
 
     except Exception as e:
         print(f"❌ Error generating plots: {e}")

@@ -16,6 +16,8 @@
 ✅ **Progress Tracking** - Percentage complete based on milestone completion
 ✅ **Admin Dashboard** - Internal view of all customers and projects across the portfolio
 ✅ **Mock Data** - 3 customers, 6 projects, 42 milestones demonstrating real scenarios
+✅ **Interactive Plot Generation** - Upload IHI test data and generate interactive Plotly graphs
+✅ **Auto-Detection** - Automatically detects commissioning vs. temperature/humidity data
 
 ---
 
@@ -85,6 +87,38 @@ This will:
 
 ---
 
+## Interactive Plot Generation
+
+The portal automatically generates interactive Plotly graphs from uploaded IHI test data:
+
+**Upload Process:**
+1. Click "Upload Test Data" on any project detail page
+2. Select an Excel file (.xlsx or .xls)
+3. System auto-detects test type (commissioning or temp/humidity)
+4. Generates interactive plots embedded in the page
+
+**Commissioning Data Plots (9 graphs):**
+- 6 Capacity Test plots (3 charge + 3 discharge cycles)
+  - SOC (%) over time
+  - Power (kW) for PCS, Battery, and MID meter
+- Charge Ramp Rate (CRR) test
+- Discharge Ramp Rate (DRR) test
+- Output Transition Control (OTC) test
+
+**Temperature & Humidity Data (1 combined graph):**
+- Top panel: Relative humidity (%) with 80% threshold line
+- Bottom panel: Container temperature (°C) with 30°C threshold line
+- Multiple sensor traces per container
+
+**Interactive Features:**
+- Zoom in/out by dragging or using controls
+- Pan across time axis
+- Hover to see exact values at any point
+- Toggle traces on/off by clicking legend
+- Download plot as PNG using camera icon
+
+---
+
 ## Project Statuses
 
 | Status | Color | Meaning |
@@ -138,16 +172,20 @@ This will:
 
 ---
 
+## Current Features
+
+✅ **File Upload & Interactive Plots** - Upload IHI test data (Excel files) and generate interactive Plotly graphs
+- Auto-detects test type (commissioning vs. temperature/humidity)
+- Generates 9 plots for commissioning data (6 capacity tests, CRR, DRR, OTC)
+- Generates 1 combined plot for temp/humidity data
+- Interactive graphs with zoom, pan, and hover details
+- Plots embedded directly in the project detail page
+
 ## Out of Scope (Future Enhancements)
 
 These features are **not** in the POC but would be important for production:
 
-1. **File Upload & Plot Generation**
-   - Integrate IHI plotting scripts (uploaded to `inputs/`)
-   - Upload Excel test files
-   - Generate and display plots inline
-
-2. **Document Management**
+1. **Document Management**
    - Upload/download project documents
    - Version tracking
    - File categorization
@@ -177,7 +215,9 @@ These features are **not** in the POC but would be important for production:
 - **Backend:** FastAPI (Python web framework)
 - **Database:** SQLite with SQLAlchemy ORM
 - **Frontend:** Jinja2 templates + Tailwind CSS (via CDN)
-- **Data:** Mock data seeded via `database.py`
+- **Data Visualization:** Plotly (interactive graphs with zoom, pan, hover)
+- **Data Processing:** Pandas (Excel file parsing and data manipulation)
+- **Mock Data:** Seeded via `database.py`
 
 ---
 
@@ -189,15 +229,17 @@ pocs/002-ad-serv-portal/
 ├── requirements.txt           # Python dependencies
 ├── run.sh                     # One-command startup
 ├── database.py                # SQLAlchemy models + seed data
-├── app.py                     # FastAPI routes
+├── app.py                     # FastAPI routes + upload handling
+├── plot_generator.py          # Plotly graph generation from IHI test data
 ├── templates/
 │   ├── base.html             # Base template with Tailwind
 │   ├── home.html             # Portal access links
 │   ├── customer_portal.html  # Customer project list
-│   ├── project_detail.html   # Milestone timeline view
+│   ├── project_detail.html   # Milestone timeline + interactive plots
 │   └── admin_dashboard.html  # Internal admin view
+├── uploads/                   # Uploaded Excel test data files
 ├── static/                    # (empty - using Tailwind CDN)
-└── inputs/                    # IHI plotting scripts (future phase)
+└── inputs/                    # Sample IHI test data files
     ├── IHI Commissioning Plot Script/
     └── IHI Temperature and Humidity Plot Script/
 ```
@@ -210,6 +252,7 @@ pocs/002-ad-serv-portal/
 - **Customer** - name, contact info, portal_token
 - **Project** - name, status, dates, location, capacity
 - **Milestone** - name, category, status, dates, notes, order
+- **TestResult** - uploaded file info, test type, plot data (JSON)
 
 ### Authentication
 - Simple portal token authentication (like vendor-portal POC)
@@ -219,6 +262,7 @@ pocs/002-ad-serv-portal/
 ### Data Relationships
 - One customer has many projects
 - One project has many milestones
+- One project has many test results (uploaded files with plots)
 - Milestones ordered by `order` field
 
 ---

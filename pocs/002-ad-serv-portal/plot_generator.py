@@ -1,20 +1,16 @@
 """
-Plot Generator Service - Adapts IHI plotting scripts to save images
+Plot Generator Service - Generates interactive Plotly graphs from IHI test data
 """
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')  # Use non-GUI backend
-import matplotlib.pyplot as plt
-import matplotlib.dates as md
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import os
 import json
 from pathlib import Path
 
-# Create directories for uploads and plots
+# Create directory for uploads
 UPLOAD_DIR = Path("uploads")
-PLOTS_DIR = Path("static/plots")
 UPLOAD_DIR.mkdir(exist_ok=True)
-PLOTS_DIR.mkdir(exist_ok=True)
 
 
 def detect_test_type(file_path):
@@ -45,12 +41,12 @@ def detect_test_type(file_path):
 
 
 def generate_commissioning_plots(file_path, project_id):
-    """Generate plots for IHI commissioning test data"""
-    plot_paths = []
+    """Generate interactive Plotly plots for IHI commissioning test data"""
+    plot_htmls = []
     base_filename = Path(file_path).stem
 
     try:
-        # File parameters (simplified from original script)
+        # File parameters
         sheet_offset = 0
         header_row = 13
 
@@ -67,7 +63,6 @@ def generate_commissioning_plots(file_path, project_id):
             otc = pd.read_excel(file_path, 9+sheet_offset, index_col=1)
         except Exception as e:
             print(f"Error reading Excel file: {e}")
-            # Return empty list if can't read file
             return []
 
         cap_tests = [chrg_1, dchg_1, chrg_2, dchg_2, chrg_3, dchg_3]
@@ -77,145 +72,204 @@ def generate_commissioning_plots(file_path, project_id):
 
         # Generate Capacity Test Plots
         for idx, test_data in enumerate(cap_tests):
-            fig = plt.figure(figsize=(10, 5))
+            fig = make_subplots(
+                rows=2, cols=1,
+                subplot_titles=("SOC (%)", "Power (kW)"),
+                vertical_spacing=0.15
+            )
 
-            plt.subplot(211)
-            plt.plot(test_data.iloc[:, 1])
-            plt.ylabel("SOC (%)")
-            plt.title(titles[idx])
-            plt.grid(which='major', axis='both')
-            plt.gca().xaxis.set_major_locator(md.HourLocator(interval=1))
-            plt.gca().xaxis.set_major_formatter(md.DateFormatter('%D %H:%M'))
-            plt.xticks(rotation=45)
+            # SOC plot (top)
+            fig.add_trace(
+                go.Scatter(x=test_data.index, y=test_data.iloc[:, 1],
+                          mode='lines', name='SOC'),
+                row=1, col=1
+            )
 
-            plt.subplot(212)
-            plt.plot(test_data.iloc[:, 2], label=test_data.columns[2])
-            plt.plot(test_data.iloc[:, 3], label=test_data.columns[3])
-            plt.plot(test_data.iloc[:, 4], label=test_data.columns[4])
-            plt.ylabel("Power (kW)")
-            plt.legend()
-            plt.grid(which='both', axis='both')
-            plt.gca().xaxis.set_major_locator(md.HourLocator(interval=1))
-            plt.gca().xaxis.set_major_formatter(md.DateFormatter('%D %H:%M'))
-            plt.xticks(rotation=45)
+            # Power plots (bottom)
+            fig.add_trace(
+                go.Scatter(x=test_data.index, y=test_data.iloc[:, 2],
+                          mode='lines', name=test_data.columns[2]),
+                row=2, col=1
+            )
+            fig.add_trace(
+                go.Scatter(x=test_data.index, y=test_data.iloc[:, 3],
+                          mode='lines', name=test_data.columns[3]),
+                row=2, col=1
+            )
+            fig.add_trace(
+                go.Scatter(x=test_data.index, y=test_data.iloc[:, 4],
+                          mode='lines', name=test_data.columns[4]),
+                row=2, col=1
+            )
 
-            plt.tight_layout()
+            fig.update_layout(
+                title_text=titles[idx],
+                height=600,
+                showlegend=True,
+                hovermode='x unified'
+            )
 
-            # Save plot
-            plot_filename = f"project_{project_id}_{base_filename}_capacity_{idx+1}.png"
-            plot_path = PLOTS_DIR / plot_filename
-            plt.savefig(plot_path, dpi=150, bbox_inches='tight')
-            plt.close(fig)
+            fig.update_xaxes(title_text="Time", row=2, col=1)
+            fig.update_yaxes(title_text="SOC (%)", row=1, col=1)
+            fig.update_yaxes(title_text="Power (kW)", row=2, col=1)
 
-            plot_paths.append(f"/static/plots/{plot_filename}")
+            plot_htmls.append({
+                'title': titles[idx],
+                'html': fig.to_html(include_plotlyjs='cdn', div_id=f'plot_{project_id}_{idx}')
+            })
 
         # Generate Charge Ramp Rate Plot
         crr_len = min(300, len(crr))
-        fig = plt.figure(figsize=(10, 5))
+        fig = make_subplots(
+            rows=2, cols=1,
+            subplot_titles=("SOC (%)", "Power (kW)"),
+            vertical_spacing=0.15
+        )
 
-        plt.subplot(211)
-        plt.plot(crr.iloc[0:crr_len, 1])
-        plt.ylabel("SOC (%)")
-        plt.title("Charge Ramp Rate Test")
-        plt.grid(which='major', axis='both')
-        plt.gca().xaxis.set_major_locator(md.SecondLocator(interval=5))
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter('%H:%M:%S'))
-        plt.xticks(rotation=45)
+        fig.add_trace(
+            go.Scatter(x=crr.index[0:crr_len], y=crr.iloc[0:crr_len, 1],
+                      mode='lines', name='SOC'),
+            row=1, col=1
+        )
 
-        plt.subplot(212)
-        plt.plot(crr.iloc[0:crr_len, 2], label=crr.columns[2])
-        plt.plot(crr.iloc[0:crr_len, 3], label=crr.columns[3])
-        plt.plot(crr.iloc[0:crr_len, 4], label=crr.columns[4])
-        plt.ylabel("Power (kW)")
-        plt.legend()
-        plt.grid(which='both', axis='both')
-        plt.gca().xaxis.set_major_locator(md.SecondLocator(interval=5))
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter('%H:%M:%S'))
-        plt.xticks(rotation=45)
+        fig.add_trace(
+            go.Scatter(x=crr.index[0:crr_len], y=crr.iloc[0:crr_len, 2],
+                      mode='lines', name=crr.columns[2]),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Scatter(x=crr.index[0:crr_len], y=crr.iloc[0:crr_len, 3],
+                      mode='lines', name=crr.columns[3]),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Scatter(x=crr.index[0:crr_len], y=crr.iloc[0:crr_len, 4],
+                      mode='lines', name=crr.columns[4]),
+            row=2, col=1
+        )
 
-        plt.tight_layout()
-        plot_filename = f"project_{project_id}_{base_filename}_crr.png"
-        plot_path = PLOTS_DIR / plot_filename
-        plt.savefig(plot_path, dpi=150, bbox_inches='tight')
-        plt.close(fig)
-        plot_paths.append(f"/static/plots/{plot_filename}")
+        fig.update_layout(
+            title_text="Charge Ramp Rate Test",
+            height=600,
+            showlegend=True,
+            hovermode='x unified'
+        )
+
+        fig.update_xaxes(title_text="Time", row=2, col=1)
+        fig.update_yaxes(title_text="SOC (%)", row=1, col=1)
+        fig.update_yaxes(title_text="Power (kW)", row=2, col=1)
+
+        plot_htmls.append({
+            'title': 'Charge Ramp Rate Test',
+            'html': fig.to_html(include_plotlyjs='cdn', div_id=f'plot_{project_id}_crr')
+        })
 
         # Generate Discharge Ramp Rate Plot
         drr_len = min(300, len(drr))
-        fig = plt.figure(figsize=(10, 5))
+        fig = make_subplots(
+            rows=2, cols=1,
+            subplot_titles=("SOC (%)", "Power (kW)"),
+            vertical_spacing=0.15
+        )
 
-        plt.subplot(211)
-        plt.plot(drr.iloc[0:drr_len, 1])
-        plt.ylabel("SOC (%)")
-        plt.title("Discharge Ramp Rate Test")
-        plt.grid(which='major', axis='both')
-        plt.gca().xaxis.set_major_locator(md.SecondLocator(interval=5))
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter('%H:%M:%S'))
-        plt.xticks(rotation=45)
+        fig.add_trace(
+            go.Scatter(x=drr.index[0:drr_len], y=drr.iloc[0:drr_len, 1],
+                      mode='lines', name='SOC'),
+            row=1, col=1
+        )
 
-        plt.subplot(212)
-        plt.plot(drr.iloc[0:drr_len, 2], label=drr.columns[2])
-        plt.plot(drr.iloc[0:drr_len, 3], label=drr.columns[3])
-        plt.plot(drr.iloc[0:drr_len, 4], label=drr.columns[4])
-        plt.ylabel("Power (kW)")
-        plt.legend()
-        plt.grid(which='both', axis='both')
-        plt.gca().xaxis.set_major_locator(md.SecondLocator(interval=5))
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter('%H:%M:%S'))
-        plt.xticks(rotation=45)
+        fig.add_trace(
+            go.Scatter(x=drr.index[0:drr_len], y=drr.iloc[0:drr_len, 2],
+                      mode='lines', name=drr.columns[2]),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Scatter(x=drr.index[0:drr_len], y=drr.iloc[0:drr_len, 3],
+                      mode='lines', name=drr.columns[3]),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Scatter(x=drr.index[0:drr_len], y=drr.iloc[0:drr_len, 4],
+                      mode='lines', name=drr.columns[4]),
+            row=2, col=1
+        )
 
-        plt.tight_layout()
-        plot_filename = f"project_{project_id}_{base_filename}_drr.png"
-        plot_path = PLOTS_DIR / plot_filename
-        plt.savefig(plot_path, dpi=150, bbox_inches='tight')
-        plt.close(fig)
-        plot_paths.append(f"/static/plots/{plot_filename}")
+        fig.update_layout(
+            title_text="Discharge Ramp Rate Test",
+            height=600,
+            showlegend=True,
+            hovermode='x unified'
+        )
+
+        fig.update_xaxes(title_text="Time", row=2, col=1)
+        fig.update_yaxes(title_text="SOC (%)", row=1, col=1)
+        fig.update_yaxes(title_text="Power (kW)", row=2, col=1)
+
+        plot_htmls.append({
+            'title': 'Discharge Ramp Rate Test',
+            'html': fig.to_html(include_plotlyjs='cdn', div_id=f'plot_{project_id}_drr')
+        })
 
         # Generate Output Transition Control Plot
-        fig = plt.figure(figsize=(10, 5))
+        fig = make_subplots(
+            rows=2, cols=1,
+            subplot_titles=("SOC (%)", "Power (kW)"),
+            vertical_spacing=0.15
+        )
 
-        plt.subplot(211)
-        plt.plot(otc.iloc[:, 1])
-        plt.ylabel("SOC (%)")
-        plt.title("Output Transition Control Test")
-        plt.grid(which='major', axis='both')
-        plt.gca().xaxis.set_major_locator(md.HourLocator(interval=1))
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter('%D %H:%M'))
-        plt.xticks(rotation=45)
+        fig.add_trace(
+            go.Scatter(x=otc.index, y=otc.iloc[:, 1],
+                      mode='lines', name='SOC'),
+            row=1, col=1
+        )
 
-        plt.subplot(212)
-        plt.plot(otc.iloc[:, 2], label=otc.columns[2])
-        plt.plot(otc.iloc[:, 3], label=otc.columns[3])
-        plt.plot(otc.iloc[:, 4], label=otc.columns[4])
-        plt.ylabel("Power (kW)")
-        plt.legend()
-        plt.grid(which='both', axis='both')
-        plt.gca().xaxis.set_major_locator(md.HourLocator(interval=1))
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter('%D %H:%M'))
-        plt.xticks(rotation=45)
+        fig.add_trace(
+            go.Scatter(x=otc.index, y=otc.iloc[:, 2],
+                      mode='lines', name=otc.columns[2]),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Scatter(x=otc.index, y=otc.iloc[:, 3],
+                      mode='lines', name=otc.columns[3]),
+            row=2, col=1
+        )
+        fig.add_trace(
+            go.Scatter(x=otc.index, y=otc.iloc[:, 4],
+                      mode='lines', name=otc.columns[4]),
+            row=2, col=1
+        )
 
-        plt.tight_layout()
-        plot_filename = f"project_{project_id}_{base_filename}_otc.png"
-        plot_path = PLOTS_DIR / plot_filename
-        plt.savefig(plot_path, dpi=150, bbox_inches='tight')
-        plt.close(fig)
-        plot_paths.append(f"/static/plots/{plot_filename}")
+        fig.update_layout(
+            title_text="Output Transition Control Test",
+            height=600,
+            showlegend=True,
+            hovermode='x unified'
+        )
+
+        fig.update_xaxes(title_text="Time", row=2, col=1)
+        fig.update_yaxes(title_text="SOC (%)", row=1, col=1)
+        fig.update_yaxes(title_text="Power (kW)", row=2, col=1)
+
+        plot_htmls.append({
+            'title': 'Output Transition Control Test',
+            'html': fig.to_html(include_plotlyjs='cdn', div_id=f'plot_{project_id}_otc')
+        })
 
     except Exception as e:
         print(f"Error generating commissioning plots: {e}")
         import traceback
         traceback.print_exc()
 
-    return plot_paths
+    return plot_htmls
 
 
 def generate_temp_humidity_plots(file_path, project_id):
-    """Generate plots for temperature and humidity data"""
-    plot_paths = []
+    """Generate interactive Plotly plots for temperature and humidity data"""
+    plot_htmls = []
     base_filename = Path(file_path).stem
 
     try:
-        # Read the Excel file (simplified - assuming single file for POC)
+        # Read the Excel file
         header_row = 1
         idx_col = 1
 
@@ -229,85 +283,94 @@ def generate_temp_humidity_plots(file_path, project_id):
         max_temp = 30
         max_humidity = 80
 
-        # Generate plot
-        fig = plt.figure(figsize=(10, 5))
+        # Create subplots
+        fig = make_subplots(
+            rows=2, cols=1,
+            subplot_titles=("Relative Humidity (%)", "Container Temperature (°C)"),
+            vertical_spacing=0.12
+        )
 
         # Top plot for humidity
-        plt.subplot(211)
         for x in range(0, data.shape[1], 4):
             if x < data.shape[1]:
-                plt.plot(data.iloc[:, x], label=data.columns[x])
-                # Add percentage text
-                over_80 = 100 * (data.iloc[:, x] > 80).sum() / len(data.iloc[:, x])
-                plt.text(data.index[0], 10*(x/4+1),
-                        f'{data.columns[x]}: {over_80:.2f}% over 80% ({len(data.iloc[:, x])} points)',
-                        fontsize=10)
+                fig.add_trace(
+                    go.Scatter(x=data.index, y=data.iloc[:, x],
+                              mode='lines', name=data.columns[x]),
+                    row=1, col=1
+                )
 
-        plt.legend()
-        plt.axhline(y=max_humidity, linestyle='--', color='r')
-        plt.gca().set_ylim(0, 100)
-        plt.ylabel("Relative Humidity (%)")
-        plt.title("Container Conditions - Humidity")
-        plt.grid(which='major', axis='both')
-        plt.gca().xaxis.set_major_locator(md.DayLocator(interval=7))
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter('%Y-%m-%d'))
-        plt.xticks(rotation=45)
+        # Add humidity threshold line
+        fig.add_hline(y=max_humidity, line_dash="dash", line_color="red",
+                     annotation_text="Max Humidity (80%)", row=1, col=1)
 
         # Bottom plot for temperature
-        plt.subplot(212)
         for y in range(0, data.shape[1], 4):
             if y+1 < data.shape[1]:
-                plt.plot(data.iloc[:, y+1], label=data.columns[y+1])
+                fig.add_trace(
+                    go.Scatter(x=data.index, y=data.iloc[:, y+1],
+                              mode='lines', name=data.columns[y+1]),
+                    row=2, col=1
+                )
             if y+2 < data.shape[1]:
                 try:
-                    plt.plot(data.iloc[:, y+2], label=data.columns[y+2])
+                    fig.add_trace(
+                        go.Scatter(x=data.index, y=data.iloc[:, y+2],
+                                  mode='lines', name=data.columns[y+2]),
+                        row=2, col=1
+                    )
                 except:
                     pass
             if y+3 < data.shape[1]:
                 try:
-                    plt.plot(data.iloc[:, y+3], label=data.columns[y+3])
+                    fig.add_trace(
+                        go.Scatter(x=data.index, y=data.iloc[:, y+3],
+                                  mode='lines', name=data.columns[y+3]),
+                        row=2, col=1
+                    )
                 except:
                     pass
 
-        plt.legend()
-        plt.axhline(y=max_temp, color='r', linestyle='--')
-        plt.ylabel("Container Temperature (C)")
-        plt.grid(which='major', axis='both')
-        plt.gca().xaxis.set_major_locator(md.DayLocator(interval=7))
-        plt.gca().xaxis.set_major_formatter(md.DateFormatter('%Y-%m-%d'))
-        plt.xticks(rotation=45)
+        # Add temperature threshold line
+        fig.add_hline(y=max_temp, line_dash="dash", line_color="red",
+                     annotation_text="Max Temperature (30°C)", row=2, col=1)
 
-        plt.tight_layout()
+        fig.update_layout(
+            title_text="Container Conditions - Temperature & Humidity",
+            height=700,
+            showlegend=True,
+            hovermode='x unified'
+        )
 
-        # Save plot
-        plot_filename = f"project_{project_id}_{base_filename}_temp_humidity.png"
-        plot_path = PLOTS_DIR / plot_filename
-        plt.savefig(plot_path, dpi=150, bbox_inches='tight')
-        plt.close(fig)
+        fig.update_xaxes(title_text="Date", row=2, col=1)
+        fig.update_yaxes(title_text="Relative Humidity (%)", range=[0, 100], row=1, col=1)
+        fig.update_yaxes(title_text="Temperature (°C)", row=2, col=1)
 
-        plot_paths.append(f"/static/plots/{plot_filename}")
+        plot_htmls.append({
+            'title': 'Temperature & Humidity Monitoring',
+            'html': fig.to_html(include_plotlyjs='cdn', div_id=f'plot_{project_id}_temp_humidity')
+        })
 
     except Exception as e:
         print(f"Error generating temp/humidity plots: {e}")
         import traceback
         traceback.print_exc()
 
-    return plot_paths
+    return plot_htmls
 
 
 def generate_plots_from_file(file_path, project_id):
     """
-    Main entry point: detect test type and generate appropriate plots
-    Returns: dict with test_type and list of plot paths
+    Main entry point: detect test type and generate appropriate interactive plots
+    Returns: dict with test_type and list of plot HTML divs
     """
     test_type = detect_test_type(file_path)
 
     if test_type == "commissioning":
-        plot_paths = generate_commissioning_plots(file_path, project_id)
+        plot_htmls = generate_commissioning_plots(file_path, project_id)
     else:
-        plot_paths = generate_temp_humidity_plots(file_path, project_id)
+        plot_htmls = generate_temp_humidity_plots(file_path, project_id)
 
     return {
         "test_type": test_type,
-        "plot_paths": plot_paths
+        "plots": plot_htmls  # Now returns list of {'title': ..., 'html': ...} dicts
     }
