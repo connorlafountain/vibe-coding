@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results Synthesis v12 — Interactive Prototype</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --anza-yellow:#ffcc43;--anza-black:#000;--anza-blue:#10697d;--anza-red:#c8215b;
+  --anza-sky-blue:#07d2ed;--anza-charcoal:#636466;--anza-gray:#d1d3d4;
+  --primary:#10697d;--primary-hover:#0b4f5e;--primary-light:#e0f0f3;
+  --accent:#ffcc43;--text-primary:#000;--text-secondary:#636466;--text-muted:#94A3B8;
+  --error:#c8215b;--border:#d1d3d4;--border-light:#E2E8F0;
+  --bg-page:#EFF3F8;--bg-card:#fff;--bg-input:#fff;--bg-subtle:#F8FAFC;--bg-hover:#F1F5F9;
+  --toggle-active:#10697d;--toast-bg:#000;--toast-text:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+[data-theme="dark"]{
+  --primary:#07d2ed;--primary-hover:#05b8d0;--primary-light:#0b3d47;
+  --text-primary:#f0f0f0;--text-secondary:#d1d3d4;--text-muted:#94A3B8;
+  --error:#e8467a;--border:#3a3a3c;--border-light:#2c2c2e;
+  --bg-page:#0a0a0a;--bg-card:#1c1c1e;--bg-input:#2c2c2e;--bg-subtle:#232325;--bg-hover:#2c2c2e;
+  --toggle-active:#07d2ed;--toast-bg:#ffcc43;--toast-text:#000;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg-page);color:var(--text-primary);padding:24px 20px}
+
+.top-bar{max-width:1320px;margin:0 auto 20px;display:flex;justify-content:space-between;align-items:center}
+.top-left{display:flex;align-items:center;gap:20px}
+.top-bar h1{font-size:22px;font-weight:700}
+.view-tabs{display:flex;gap:2px;background:var(--border-light);border-radius:10px;padding:3px}
+.view-tab{padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-secondary);background:transparent;transition:all .2s;border:none;user-select:none}
+.view-tab.active{background:var(--bg-card);color:var(--text-primary);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.project-bar{display:flex;gap:16px;align-items:center;font-size:13px;color:var(--text-secondary)}
+.project-bar .tag{background:var(--primary-light);color:var(--primary);padding:4px 12px;border-radius:12px;font-weight:600;font-size:12px}
+
+.section{max-width:1320px;margin:0 auto;position:absolute;left:-9999px;opacity:0;pointer-events:none;width:calc(100% - 40px);max-width:1320px}
+.section.visible{position:static;left:auto;opacity:1;pointer-events:auto}
+.card{background:var(--bg-card);border-radius:12px;border:1px solid var(--border-light);padding:24px;margin-bottom:20px}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--bg-card);border-radius:10px;border:1px solid var(--border-light);padding:16px 18px;position:relative;overflow:hidden}
+.kpi-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600}
+.kpi-value{font-size:22px;font-weight:800;line-height:1.2}
+.kpi-sub{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.kpi-range{display:flex;align-items:center;gap:6px;margin-top:8px}
+.kpi-bar-track{flex:1;height:6px;background:var(--border-light);border-radius:3px;position:relative}
+.kpi-bar-fill{height:100%;border-radius:3px;background:var(--primary)}
+.kpi-bar-marker{position:absolute;top:-3px;width:3px;height:12px;border-radius:2px;background:var(--accent)}
+.kpi-minmax{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:3px}
+.kpi.highlight{border-color:var(--primary);background:linear-gradient(135deg,var(--primary-light),var(--bg-card))}
+.kpi.highlight .kpi-value{color:var(--primary)}
+@media(max-width:1100px){.kpi-strip{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.kpi-strip{grid-template-columns:repeat(2,1fr)}}
+
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.dash-card{background:var(--bg-subtle);border-radius:10px;padding:14px 16px;min-height:220px}
+.dash-chart{position:relative;height:160px;cursor:crosshair}
+@media(max-width:700px){.dash-grid{grid-template-columns:1fr}}
+
+.ins-list{display:flex;flex-direction:column;gap:12px}
+.ins{display:flex;gap:14px;align-items:flex-start;padding:12px 14px;border-radius:10px;background:var(--bg-subtle)}
+.ins-icon{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700}
+.ic-g{background:#dcfce7;color:#166534} .ic-b{background:#dbeafe;color:#1e40af} .ic-y{background:#fef3c7;color:#92400e}
+[data-theme="dark"] .ic-g{background:#14532d;color:#86efac} [data-theme="dark"] .ic-b{background:#1e3a5f;color:#93c5fd} [data-theme="dark"] .ic-y{background:#451a03;color:#fcd34d}
+.ins-text{font-size:13px;line-height:1.6;color:var(--text-secondary)} .ins-text strong{color:var(--text-primary)}
+
+.prio-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.prio-head h3{font-size:15px;font-weight:700}
+.prio-head .hint{font-size:12px;color:var(--text-muted)}
+.prio-sliders{display:flex;gap:24px}
+.prio-s{flex:1}
+.prio-s label{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+.prio-s label .wt{color:var(--primary);font-weight:700}
+.prio-s input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:var(--border-light);outline:none;transition:all .3s}
+.prio-s input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--primary);cursor:pointer}
+
+.filter-strip{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.fchip{padding:7px 16px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:2px solid var(--border-light);color:var(--text-secondary);background:var(--bg-subtle);transition:all .2s;user-select:none}
+.fchip.active{background:var(--primary-light);color:var(--primary);border-color:var(--primary);font-weight:600}
+.bdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+
+.preset-tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;margin-left:8px;background:var(--accent);color:#000;display:none}
+.preset-tag.visible{display:inline}
+
+.table-card{background:var(--bg-card);border-radius:12px;border:1px solid var(--border-light);overflow:hidden}
+.t-toolbar{padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border-light)}
+.t-toolbar h2{font-size:16px;font-weight:700}
+.t-toolbar .t-meta{font-size:13px;color:var(--text-muted)}
+.st{width:100%;border-collapse:collapse;font-size:13px}
+.st thead th{padding:10px 14px;text-align:left;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:2px solid var(--border-light);background:var(--bg-subtle);cursor:pointer;user-select:none;white-space:nowrap}
+.st thead th:hover{color:var(--primary)} .st thead th.sorted{color:var(--primary)}
+.st thead th .sa{margin-left:4px;font-size:10px}
+.st tbody tr{border-bottom:1px solid var(--border-light);transition:background .15s}
+.st tbody tr:hover{background:var(--bg-hover)} .st tbody tr.rec{background:rgba(16,105,125,.04)}
+.st tbody td{padding:10px 14px;vertical-align:middle}
+.ibc{display:flex;align-items:center;gap:8px}
+.ibw{flex:1;height:8px;background:var(--border-light);border-radius:4px;overflow:hidden;min-width:50px}
+.ib{height:100%;border-radius:4px;transition:width .3s}
+.ib.good{background:#10697d} .ib.neutral{background:var(--anza-yellow)} .ib.bad{background:var(--anza-red)}
+[data-theme="dark"] .ib.good{background:#07d2ed}
+.ibv{font-size:13px;font-weight:600;min-width:48px;text-align:right}
+.rb{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.r1{background:#ffcc43;color:#000} .r2{background:var(--border);color:#000} .r3{background:#cd7f32;color:#fff} .ro{background:var(--bg-subtle);color:var(--text-muted)}
+.rec-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:8px;margin-left:8px;background:var(--primary-light);color:var(--primary)}
+.pc{line-height:1.5} .pc .bl{font-weight:600} .pc .ps{font-size:12px;color:var(--text-secondary)}
+.cdot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+.empty-state{padding:40px 20px;text-align:center;background:var(--bg-subtle);border-radius:12px;border:1px dashed var(--border-light)}
+.empty-state-icon{font-size:32px;margin-bottom:12px}
+.empty-state-title{font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text-primary)}
+.empty-state-text{font-size:13px;color:var(--text-secondary);margin-bottom:20px}
+
+.parcoord-wrap{position:relative;height:380px;overflow:hidden}
+.parcoord-canvas{width:100%;height:100%}
+
+.dist-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dist-chart{position:relative;height:200px}
+
+.radar-wrap{position:relative;height:320px}
+
+.pin-btn{font-size:11px;padding:3px 10px;border-radius:12px;border:1px solid var(--border-light);background:var(--bg-subtle);color:var(--text-secondary);cursor:pointer;transition:all .2s}
+.pin-btn:hover{border-color:var(--primary);color:var(--primary)}
+.pin-btn.pinned{background:var(--primary-light);color:var(--primary);border-color:var(--primary);font-weight:600}
+
+.view-tab.disabled{opacity:0.4;pointer-events:none;cursor:default}
+
+/* STICKY SELECTED ARCHITECTURES */
+.selected-archs-bar{position:sticky;top:44px;z-index:49;background:var(--bg-card);border:1px solid var(--border-light);border-radius:10px;padding:10px 16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.selected-arch-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:16px;border:2px solid;background:var(--bg-subtle);font-size:11px;white-space:nowrap}
+
+.compare-btn{width:28px;height:28px;border-radius:50%;border:2px solid var(--border-light);background:transparent;color:var(--text-muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-weight:700}
+.compare-btn:hover{border-color:var(--primary);color:var(--primary)}
+.compare-btn.added{background:var(--primary);border-color:var(--primary);color:#fff}
+
+.theme-toggle{position:fixed;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:9999}
+.theme-toggle:hover{border-color:var(--primary)} .theme-icon{font-size:18px}
+.toast-container{position:fixed;top:24px;right:70px;z-index:1000}
+.toast{background:var(--toast-bg);color:var(--toast-text);padding:12px 20px;border-radius:8px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.15);animation:slideIn .3s ease;max-width:420px}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+.filter-bar{max-width:1320px;margin:0 auto 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:0;transition:all .3s}
+.filter-bar.has-filters{position:sticky;top:0;z-index:50;min-height:40px;padding:10px 16px;background:var(--bg-card);border-radius:10px;border:1px solid var(--primary);display:flex}
+.filter-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:16px;font-size:12px;font-weight:600;background:var(--primary-light);color:var(--primary);border:1px solid var(--primary)}
+.filter-tag .remove{cursor:pointer;font-size:14px;margin-left:2px;opacity:0.7}
+.filter-tag .remove:hover{opacity:1}
+.filter-count{font-size:13px;font-weight:700;color:var(--primary)}
+.filter-clear{font-size:12px;color:var(--error);cursor:pointer;font-weight:600;margin-left:auto;padding:4px 12px;border-radius:8px;border:1px solid var(--error);background:transparent}
+.filter-clear:hover{background:var(--error);color:white}
+
+.range-row{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px}
+.range-row label{color:var(--text-muted);font-weight:600;min-width:28px}
+.range-input{width:72px;padding:4px 8px;border:1px solid var(--border-light);border-radius:6px;font-size:12px;background:var(--bg-input);color:var(--text-primary);text-align:center}
+.range-input:focus{outline:2px solid var(--primary);border-color:var(--primary)}
+.range-apply{padding:4px 10px;border-radius:6px;border:1px solid var(--primary);background:var(--primary-light);color:var(--primary);font-size:11px;font-weight:600;cursor:pointer}
+.range-apply:hover{background:var(--primary);color:#fff}
+
+.collapsible-card{background:var(--bg-card);border-radius:12px;border:1px solid var(--border-light);margin-bottom:16px;overflow:hidden}
+.collapsible-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;cursor:pointer;user-select:none}
+.collapsible-header:hover{background:var(--bg-hover)}
+.collapse-arrow{font-size:16px;color:var(--text-muted);transition:transform .2s}
+.collapse-arrow.collapsed{transform:rotate(-90deg)}
+.collapsible-body{padding:0 20px 16px;transition:max-height .3s ease,opacity .2s ease;max-height:500px;opacity:1;overflow:hidden}
+.collapsible-body.collapsed{max-height:0;opacity:0;padding-bottom:0}
+
+.ov-tabs{display:flex;gap:0;border-bottom:2px solid var(--border-light);margin-bottom:20px}
+.ov-tab{padding:10px 20px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;user-select:none}
+.ov-tab:hover{color:var(--text-secondary)}
+.ov-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+.page-nav{display:flex;align-items:center;gap:8px}
+.page-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border-light);background:var(--bg-subtle);color:var(--text-secondary);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.page-btn:hover:not(:disabled){border-color:var(--primary);color:var(--primary)}
+.page-btn:disabled{opacity:0.3;cursor:default}
+.page-indicator{font-size:12px;color:var(--text-muted);min-width:40px;text-align:center}
+
+.drag-overlay{position:absolute;top:0;height:100%;background:rgba(255,204,67,0.15);border-left:2px solid var(--accent);border-right:2px solid var(--accent);pointer-events:none;z-index:5;display:none}
+.scatter-canvas{position:relative}
+.scatter-brush{position:absolute;border:2px solid var(--accent);background:rgba(255,204,67,.12);pointer-events:none;display:none;z-index:5}
+
+.styled-select{padding:7px 28px 7px 12px;border:1px solid var(--border-light);border-radius:8px;font-size:13px;font-weight:500;background:var(--bg-input);color:var(--text-primary);cursor:pointer;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394A3B8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .2s}
+.styled-select:hover{border-color:var(--primary)}
+.styled-select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(16,105,125,.1)}
+.sel-label{font-size:12px;font-weight:600;color:var(--text-muted)}
+
+.sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.sh h2{font-size:16px;font-weight:700}
+
+/* COMPARE VIEW STYLES */
+.compare-header{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.compare-arch-card{flex:1;min-width:200px;border-radius:10px;border:2px solid var(--border-light);padding:14px 18px;background:var(--bg-card)}
+.compare-arch-card .arch-name{font-size:14px;font-weight:700}
+.compare-arch-card .arch-pcs{font-size:12px;color:var(--text-secondary)}
+.compare-arch-card .arch-score{font-size:12px;font-weight:700;margin-top:6px}
+
+.compare-tabs{display:flex;gap:0;border-bottom:2px solid var(--border-light);margin-bottom:20px;flex-wrap:wrap;position:sticky;top:0;z-index:50;background:var(--bg-page);padding-top:8px}
+.compare-tab{padding:10px 20px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;user-select:none}
+.compare-tab:hover{color:var(--text-secondary)}
+.compare-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+/* Segmented toggle */
+.seg-toggle{display:inline-flex;border:2px solid var(--border-light);border-radius:8px;overflow:hidden}
+.seg-opt{padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-secondary);background:var(--bg-subtle);transition:all .2s;user-select:none;border-right:1px solid var(--border-light)}
+.seg-opt:last-child{border-right:none}
+.seg-opt.active{background:var(--primary);color:#fff}
+.seg-opt:not(.active):hover{background:var(--bg-hover)}
+
+.compare-chart{background:var(--bg-card);border-radius:12px;border:1px solid var(--border-light);padding:16px;margin-bottom:20px}
+.compare-chart h3{font-size:14px;font-weight:600;margin-bottom:4px;color:var(--text-primary)}
+.compare-chart .chart-desc{font-size:11px;color:var(--text-muted);margin-bottom:12px}
+.compare-chart-wrap{position:relative;height:240px}
+
+.compare-table{width:100%;border-collapse:collapse;font-size:13px}
+.compare-table th{text-align:left;padding:10px 14px;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;border-bottom:2px solid var(--border-light);background:var(--bg-subtle)}
+.compare-table td{padding:10px 14px;border-bottom:1px solid var(--border-light);text-align:center}
+.compare-table td:first-child{text-align:left;font-weight:500;color:var(--text-secondary);min-width:200px}
+.compare-table .section-header{background:var(--primary-light);font-weight:700;color:var(--text-primary);text-align:left;font-size:13px;padding:10px 14px;border-bottom:2px solid var(--primary)}
+.compare-table .best{font-weight:700;color:var(--primary)}
+.compare-table .check{color:#10b981}
+
+/* Collapsible chart in compare */
+.chart-collapse{border:1px solid var(--border-light);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.chart-collapse-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:var(--bg-subtle);user-select:none}
+.chart-collapse-header:hover{background:var(--bg-hover)}
+.chart-collapse-header h3{font-size:14px;font-weight:600;margin:0}
+.chart-collapse-toggle{font-size:12px;color:var(--text-muted);font-weight:600;display:flex;align-items:center;gap:4px}
+.chart-collapse-body{padding:16px;transition:max-height .3s ease;max-height:500px;overflow:hidden}
+.chart-collapse-body.collapsed{max-height:0;padding:0 16px}
+.compare-table .cross{color:var(--text-muted)}
+
+@media(max-width:900px){.dash-grid,.dist-grid{grid-template-columns:1fr}.prio-sliders{flex-direction:column;gap:12px}.compare-header{flex-direction:column}}
+
+/* ONBOARDING STEPPER */
+.onboarding-strip{max-width:1320px;margin:0 auto 16px;background:linear-gradient(135deg,var(--primary-light),var(--bg-card));border:1px solid var(--primary);border-radius:10px;padding:12px 20px;transition:all .3s}
+.onboarding-strip.dismissed{display:none}
+.onboarding-content{display:flex;align-items:center;justify-content:space-between}
+.onboarding-steps{display:flex;align-items:center;gap:6px}
+.ob-step{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;transition:all .2s;position:relative}
+.ob-step.active{background:var(--primary);border-radius:8px}
+.ob-step.active .ob-num,.ob-step.active .ob-text{color:#fff}
+.ob-step.completed .ob-num{background:var(--primary);color:#fff}
+.ob-num{width:22px;height:22px;border-radius:50%;border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
+.ob-text{font-size:13px;font-weight:600;color:var(--text-primary)}
+.ob-hint{display:none;font-size:11px;color:var(--text-muted);font-weight:400}
+.ob-step.active .ob-hint{display:inline;color:rgba(255,255,255,.8)}
+.ob-arrow{color:var(--text-muted);font-size:14px}
+.ob-dismiss{padding:6px 14px;border-radius:8px;border:1px solid var(--primary);background:transparent;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer}
+.ob-dismiss:hover{background:var(--primary);color:#fff}
+
+/* FEEDBACK WIDGET */
+.feedback-trigger{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:10px 18px 10px 14px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.1);transition:all .25s;color:var(--text-secondary);font-size:14px;font-weight:500}
+.feedback-trigger:hover{border-color:var(--primary);color:var(--primary);box-shadow:0 6px 24px rgba(0,0,0,.14);transform:translateY(-2px)}
+.feedback-trigger .fb-icon{font-size:18px}
+.feedback-popover{position:fixed;bottom:76px;right:24px;z-index:2001;width:360px;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.16);opacity:0;transform:translateY(12px) scale(.96);pointer-events:none;transition:all .25s}
+.feedback-popover.open{opacity:1;transform:translateY(0) scale(1);pointer-events:all}
+.feedback-backdrop{position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,.3);display:none}
+.feedback-backdrop.open{display:block}
+.fb-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 0}
+.fb-header-title{font-size:16px;font-weight:700}
+.fb-close{width:28px;height:28px;border:none;background:none;color:var(--text-muted);font-size:20px;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.fb-close:hover{background:var(--bg-hover);color:var(--text-primary)}
+.fb-body{padding:16px 20px 20px}
+.fb-prompt{font-size:14px;color:var(--text-secondary);margin-bottom:14px}
+.fb-rating-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:18px}
+.fb-rating-btn{width:52px;height:52px;border:2px solid var(--border-light);border-radius:12px;background:var(--bg-subtle);cursor:pointer;font-size:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .15s;padding:4px}
+.fb-rating-btn:hover{border-color:var(--primary);transform:scale(1.08)}
+.fb-rating-btn.selected{border-color:var(--primary);background:var(--primary-light);transform:scale(1.08)}
+.fb-rating-label{font-size:9px;color:var(--text-muted);margin-top:2px;font-weight:600}
+.fb-categories{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.fb-cat-chip{padding:5px 12px;border-radius:16px;font-size:12px;border:1.5px solid var(--border-light);color:var(--text-secondary);cursor:pointer;transition:all .15s;user-select:none}
+.fb-cat-chip:hover{border-color:var(--primary)}
+.fb-cat-chip.selected{background:var(--primary-light);border-color:var(--primary);color:var(--primary);font-weight:600}
+.fb-textarea{width:100%;min-height:60px;border:1px solid var(--border-light);border-radius:8px;padding:10px;font-size:13px;resize:vertical;background:var(--bg-input);color:var(--text-primary);font-family:inherit}
+.fb-submit{padding:10px 24px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer;opacity:0.4;transition:opacity .2s}
+.fb-submit:not(:disabled){opacity:1;cursor:pointer}
+
+</style>
+</head>
+<body>
+
+<div class="theme-toggle" id="themeToggle" title="Toggle theme"><span class="theme-icon" id="themeIcon">☀️</span></div>
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="top-bar">
+  <div class="top-left">
+    <h1>Results</h1>
+    <div class="view-tabs" id="viewTabs">
+      <div class="view-tab active" data-view="overview">Overview</div>
+      <div class="view-tab" data-view="explore" id="compareTab">Compare</div>
+    </div>
+  </div>
+  <div class="project-bar"><span class="tag">200 MW / 4hr</span><span>Phoenix, AZ</span><span>20-yr CMA</span></div>
+</div>
+
+<!-- ===== OVERVIEW VIEW ===== -->
+<div class="section visible" id="overviewView">
+  <div class="kpi-strip" id="kpiStrip"></div>
+  <div class="onboarding-strip" id="onboarding">
+    <div class="onboarding-content">
+      <div class="onboarding-steps">
+        <div class="ob-step active" data-step="1">
+          <span class="ob-num">1</span>
+          <span class="ob-text">Filter</span>
+          <span class="ob-hint">Click bars or drag on charts to narrow architectures</span>
+        </div>
+        <div class="ob-arrow">→</div>
+        <div class="ob-step" data-step="2">
+          <span class="ob-num">2</span>
+          <span class="ob-text">Prioritize</span>
+          <span class="ob-hint">Set importance sliders to rank by what matters to you</span>
+        </div>
+        <div class="ob-arrow">→</div>
+        <div class="ob-step" data-step="3">
+          <span class="ob-num">3</span>
+          <span class="ob-text">Select</span>
+          <span class="ob-hint">Click + on architectures to add them for comparison</span>
+        </div>
+        <div class="ob-arrow">→</div>
+        <div class="ob-step" data-step="4">
+          <span class="ob-num">4</span>
+          <span class="ob-text">Compare</span>
+          <span class="ob-hint">Switch to Compare tab for detailed side-by-side analysis</span>
+        </div>
+      </div>
+      <button class="ob-dismiss" onclick="dismissOnboarding()">Got it</button>
+    </div>
+  </div>
+  <div class="filter-bar" id="filterBar"></div>
+  <div id="selectedArchsCard"></div>
+
+  <div class="collapsible-card" id="insightsCard">
+    <div class="collapsible-header" onclick="toggleInsights()">
+      <h2 style="font-size:15px;font-weight:700;margin:0">Key Insights</h2>
+      <span class="collapse-arrow collapsed" id="insightsArrow">▾</span>
+    </div>
+    <div class="collapsible-body collapsed" id="insightsBody">
+      <div class="ins-list" id="ovIns"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="ov-tabs" id="graphTabs">
+        <div class="ov-tab active" data-gtab="overview">Overview</div>
+        <div class="ov-tab" data-gtab="lifecycle">Lifecycle Costs</div>
+        <div class="ov-tab" data-gtab="supply">Supply & Counterparty</div>
+        <div class="ov-tab" data-gtab="bol">BOL Architecture</div>
+        <div class="ov-tab" data-gtab="cm">Capacity Maintenance</div>
+        <div class="ov-tab" data-gtab="scatter">Scatter</div>
+      </div>
+      <div class="page-nav">
+        <button class="page-btn" id="graphPrev" onclick="pageGraphs(-1)">‹</button>
+        <span class="page-indicator" id="graphPageInfo">1 / 1</span>
+        <button class="page-btn" id="graphNext" onclick="pageGraphs(1)">›</button>
+      </div>
+    </div>
+    <div class="dash-grid" id="graphGrid">
+      <div class="dash-card" id="gSlot0"></div>
+      <div class="dash-card" id="gSlot1"></div>
+      <div class="dash-card" id="gSlot2"></div>
+      <div class="dash-card" id="gSlot3"></div>
+    </div>
+    <div id="scatterPanel" style="display:none">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <label class="sel-label">Y axis</label><select class="styled-select" id="scatY"></select>
+        <label class="sel-label">X axis</label><select class="styled-select" id="scatX"></select>
+        <label class="sel-label">Color by</label><select class="styled-select" id="scatColor"></select>
+      </div>
+      <div style="position:relative;height:400px;cursor:crosshair" id="scatWrap">
+        <canvas id="scatCanvas"></canvas>
+        <div class="scatter-brush" id="scatBrush"></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Drag a rectangle to filter. Categorical axes spread points into lanes. ⬡ = categorical field.</div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border-light)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--text-primary)">Priorities <span class="preset-tag" id="presetTag">Preset</span></div>
+        <div style="font-size:11px;color:var(--text-muted)">Rate 0–10 · Higher = more important</div>
+      </div>
+      <div class="prio-sliders">
+        <div class="prio-s"><label>Cost <span class="wt" id="wCost">8/10</span></label><input type="range" id="sliderCost" min="0" max="10" value="8" oninput="updateSlider('cost',this.value)"></div>
+        <div class="prio-s"><label>Augmentation <span class="wt" id="wAug">5/10</span></label><input type="range" id="sliderAug" min="0" max="10" value="5" oninput="updateSlider('aug',this.value)"></div>
+        <div class="prio-s"><label>Footprint <span class="wt" id="wFoot">3/10</span></label><input type="range" id="sliderFoot" min="0" max="10" value="3" oninput="updateSlider('foot',this.value)"></div>
+        <div class="prio-s"><label>Price <span class="wt" id="wPrice">4/10</span></label><input type="range" id="sliderPrice" min="0" max="10" value="4" oninput="updateSlider('price',this.value)"></div>
+      </div>
+      <div class="filter-strip" id="clusterChips" style="margin-top:10px"></div>
+    </div>
+    <div class="ov-tabs" id="tableTabs" style="padding:0 20px">
+      <div class="ov-tab active" data-ttab="overview">Overview</div>
+      <div class="ov-tab" data-ttab="lifecycle">Lifecycle Costs</div>
+      <div class="ov-tab" data-ttab="supply">Supply & Counterparty</div>
+      <div class="ov-tab" data-ttab="bol">BOL Architecture</div>
+      <div class="ov-tab" data-ttab="cm">Capacity Maintenance</div>
+    </div>
+    <div class="t-toolbar">
+      <h2 id="tTitle">Top Architectures</h2>
+      <span class="t-meta" id="tMeta"></span>
+    </div>
+    <div style="overflow-x:auto"><table class="st"><thead id="tHead"></thead><tbody id="tBody"></tbody></table></div>
+  </div>
+
+</div>
+
+<!-- ===== EXPLORE VIEW ===== -->
+<div class="section" id="exploreView">
+  <!-- Compare mode toggle -->
+  <div class="card" style="display:flex;align-items:center;gap:20px;padding:16px 24px">
+    <span style="font-size:14px;font-weight:700">Compare:</span>
+    <div class="seg-toggle" id="compareModeToggle">
+      <div class="seg-opt active" data-cmode="architectures" onclick="setCompareMode('architectures')">Cross-Architecture</div>
+      <div class="seg-opt" data-cmode="schedules" onclick="setCompareMode('schedules')">Within Architecture</div>
+    </div>
+    <div id="archPickerWrap" style="display:none;margin-left:12px">
+      <label class="sel-label" style="margin-right:6px">Architecture:</label>
+      <select class="styled-select" id="schedArchPicker" onchange="state.schedArchId=+this.value;renderExplore()"></select>
+    </div>
+    <div style="flex:1"></div>
+    <div style="font-size:12px;color:var(--text-muted)" id="compareModeHint">Comparing pinned architectures (best schedule each)</div>
+  </div>
+  <div id="compareHeader"></div>
+  <div class="compare-tabs" id="compareTabs"></div>
+  <div id="compareContent"></div>
+</div>
+
+<!-- Feedback Widget (must be before script so JS can find elements) -->
+<div class="feedback-backdrop" id="fbBackdrop"></div>
+<div class="feedback-trigger" id="fbTrigger" title="Share feedback">
+  <span class="fb-icon">💬</span>
+  <span>Feedback</span>
+</div>
+<div class="feedback-popover" id="fbPopover">
+  <div id="fbFormState">
+    <div class="fb-header">
+      <span class="fb-header-title">Share Feedback</span>
+      <button class="fb-close" id="fbClose">×</button>
+    </div>
+    <div class="fb-body">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;padding:8px 12px;background:var(--bg-subtle);border-radius:8px">
+        🧪 <strong>Prototype feedback.</strong> Your input is tracked automatically.
+      </div>
+      <p class="fb-prompt">How's your experience with this prototype?</p>
+      <div class="fb-rating-row">
+        <button class="fb-rating-btn" data-rating="1">😞<span class="fb-rating-label">Frustrated</span></button>
+        <button class="fb-rating-btn" data-rating="2">😐<span class="fb-rating-label">Okay</span></button>
+        <button class="fb-rating-btn" data-rating="3">🙂<span class="fb-rating-label">Good</span></button>
+        <button class="fb-rating-btn" data-rating="4">😊<span class="fb-rating-label">Great</span></button>
+        <button class="fb-rating-btn" data-rating="5">🤩<span class="fb-rating-label">Love it</span></button>
+      </div>
+      <div class="fb-categories" id="fbCategories">
+        <span class="fb-cat-chip" data-cat="usability">Usability</span>
+        <span class="fb-cat-chip" data-cat="speed">Speed</span>
+        <span class="fb-cat-chip" data-cat="design">Design</span>
+        <span class="fb-cat-chip" data-cat="missing-feature">Missing feature</span>
+        <span class="fb-cat-chip" data-cat="bug">Bug</span>
+        <span class="fb-cat-chip" data-cat="filtering">Filtering</span>
+        <span class="fb-cat-chip" data-cat="compare">Compare view</span>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:6px">Anything specific? <span style="color:var(--text-muted)">(optional)</span></div>
+        <textarea class="fb-textarea" id="fbComment" placeholder="Tell us what's on your mind..." style="width:100%;min-height:60px;border:1px solid var(--border-light);border-radius:8px;padding:10px;font-size:13px;resize:vertical;background:var(--bg-input);color:var(--text-primary);font-family:inherit"></textarea>
+      </div>
+    </div>
+    <div style="padding:0 20px 16px;display:flex;justify-content:flex-end">
+      <button class="fb-submit" id="fbSubmit" disabled style="padding:10px 24px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:14px;font-weight:600;cursor:pointer;opacity:0.4">Submit</button>
+    </div>
+  </div>
+  <div id="fbThankYou" style="display:none;text-align:center;padding:40px 20px">
+    <div style="font-size:40px;margin-bottom:12px">✓</div>
+    <h3 style="margin-bottom:6px">Thanks for your feedback!</h3>
+    <p style="color:var(--text-secondary);font-size:13px">We use this to shape what ships next.</p>
+  </div>
+</div>
+<iframe id="fbIframe" name="fbIframe" style="display:none"></iframe>
+
+<script>
+function applyChartDefaults(){
+  const dk=document.documentElement.getAttribute('data-theme')==='dark';
+  Chart.defaults.color=dk?'#d1d3d4':'#636466';
+  Chart.defaults.borderColor=dk?'#2c2c2e':'#E2E8F0';
+  Chart.defaults.plugins.legend.labels.color=dk?'#f0f0f0':'#000';
+}
+applyChartDefaults();
+
+const BL=[{n:'CATL 314Ah EnerOne',k:3727,c:98},{n:'BYD Cube T28',k:2816,c:105},{n:'EVE LF560K',k:3480,c:92},{n:'Samsung E3',k:3100,c:110},{n:'Sungrow PowerTitan',k:5017,c:88}];
+const PL=[{n:'Sungrow SC5000UD-MV',v:5500,e:.987},{n:'Power Electronics HEC-MV',v:4600,e:.984},{n:'SMA Sunny Central',v:4400,e:.982},{n:'ABB PVS-175',v:4100,e:.98}];
+function sr(s){return function(){s=(s*16807)%2147483647;return(s-1)/2147483646}}
+const R=sr(42);
+
+const allArchs=[];
+for(let i=0;i<400;i++){
+  const b=BL[Math.floor(R()*BL.length)],p=PL[Math.floor(R()*PL.length)];
+  const ac=Math.floor(R()*5),bl=42+R()*22,ap=ac*(.5+R()*1.5),eb=(p.e-.98)*80;
+  const npv=bl-eb+ap+(b.c-88)*.12,ep=120+(npv-42)*2.8+R()*15,fp=8+R()*14+ac*1.2;
+  const bc=Math.ceil(200000/b.k*(1+ac*.08))+Math.floor(R()*20),pc=Math.ceil(200000/p.v)+Math.floor(R()*8);
+  allArchs.push({id:i,block_name:b.n,pcs_name:p.n,lifecycle_npv:+npv.toFixed(2),effective_price:+ep.toFixed(2),
+    aug_count:ac,footprint:+fp.toFixed(1),bol_block_count:bc,bol_pcs_count:pc,
+    bol_capex_M:+(npv*(.55+R()*.15)).toFixed(2),opex_npv_M:+(npv*(.08+R()*.06)).toFixed(2),
+    aug_capex_npv_M:+(ac*(1.2+R()*2.5)).toFixed(2),itc_benefit_M:+(npv*(.06+R()*.04)).toFixed(2)});
+}
+
+const SUPPLY_DATA = {
+  'CATL 314Ah EnerOne': {location:'Ningde, China', feoc:'Low', integration:'Pack and Container', capacity:'80 GWh', projects:'50+', avgSize:'1000 MWh+'},
+  'BYD Cube T28': {location:'Shenzhen, China', feoc:'Low', integration:'Cell, Pack and Container', capacity:'45 GWh', projects:'30-50', avgSize:'500-1000 MWh'},
+  'EVE LF560K': {location:'Huizhou, China', feoc:'Low', integration:'Cell and Pack', capacity:'30 GWh', projects:'11-25', avgSize:'101-500 MWh'},
+  'Samsung E3': {location:'Cheonan, South Korea', feoc:'Medium', integration:'Cell and Module', capacity:'20 GWh', projects:'11-25', avgSize:'101-500 MWh'},
+  'Sungrow PowerTitan': {location:'Hefei, China', feoc:'Low', integration:'Pack and Container', capacity:'35 GWh', projects:'25-50', avgSize:'501-1000 MWh'},
+};
+
+const OV_TAB_COLS = {
+  overview: [
+    {key:'effective_price', label:'Price ($/kWh)', fmt: v=>('$'+v.toFixed(2))},
+    {key:'_price_usd', label:'Price ($M)', compute: a=>(a.effective_price*800/1e6).toFixed(2), fmt: v=>'$'+v+'M'},
+    {key:'lifecycle_npv', label:'Lifecycle Cost ($M)', fmt: v=>'$'+v.toFixed(1)+'M'},
+    {key:'_ac_energy', label:'Delivered AC Energy', compute: a=>(a.bol_block_count*3.5).toFixed(1), fmt: v=>v+' MWh'},
+    {key:'footprint', label:'Lifetime Install Area', fmt: v=>v.toFixed(2)+' acres'},
+  ],
+  lifecycle: [
+    {key:'bol_capex_M', label:'Price ($M)', fmt: v=>'$'+v.toFixed(2)+'M'},
+    {key:'_install', label:'Variable Install Cost', compute: a=>(a.lifecycle_npv*0.05).toFixed(2), fmt: v=>'$'+v+'M'},
+    {key:'aug_capex_npv_M', label:'Augmentation CapEx', fmt: v=>'$'+v.toFixed(2)+'M'},
+    {key:'opex_npv_M', label:'OpEx', fmt: v=>'$'+v.toFixed(2)+'M'},
+    {key:'itc_benefit_M', label:'ITC Benefit', fmt: v=>'$'+v.toFixed(2)+'M'},
+    {key:'lifecycle_npv', label:'Lifecycle Cost ($M)', fmt: v=>'$'+v.toFixed(1)+'M'},
+  ],
+  supply: [
+    {key:'_location', label:'Cell Factory Location', compute: a=>SUPPLY_DATA[a.block_name]?.location||'Unknown'},
+    {key:'_feoc', label:'FEOC Risk Rating', compute: a=>SUPPLY_DATA[a.block_name]?.feoc||'Unknown'},
+    {key:'_integration', label:'Vertical Integration', compute: a=>SUPPLY_DATA[a.block_name]?.integration||'Unknown'},
+    {key:'_capacity', label:'Global Mfg Capacity', compute: a=>SUPPLY_DATA[a.block_name]?.capacity||'Unknown'},
+    {key:'_projects', label:'NA Projects', compute: a=>SUPPLY_DATA[a.block_name]?.projects||'Unknown'},
+    {key:'_avgSize', label:'Recent Avg Project Size', compute: a=>SUPPLY_DATA[a.block_name]?.avgSize||'Unknown'},
+  ],
+  bol: [
+    {key:'bol_block_count', label:'Block Count', fmt: v=>v},
+    {key:'bol_pcs_count', label:'PCS Count', fmt: v=>v},
+    {key:'_real_power', label:'Real Power (MW)', compute: a=>(a.bol_pcs_count*4.5).toFixed(1), fmt: v=>v+' MW'},
+    {key:'_ac_energy', label:'Delivered AC Energy', compute: a=>(a.bol_block_count*3.5).toFixed(1), fmt: v=>v+' MWh'},
+    {key:'_rte', label:'RTE (%)', compute: a=>(86+Math.random()*4).toFixed(2), fmt: v=>v+'%'},
+    {key:'_bol_area', label:'BOL Install Area', compute: a=>(a.footprint*0.6).toFixed(2), fmt: v=>v+' acres'},
+  ],
+  cm: [
+    {key:'bol_block_count', label:'BOL Block Count', fmt: v=>v},
+    {key:'bol_pcs_count', label:'BOL PCS Count', fmt: v=>v},
+    {key:'_aug_years', label:'Augmentation Years', compute: a=>a.aug_count>0?Array.from({length:a.aug_count},(_,i)=>Math.floor(3+i*(17/a.aug_count))).join(', '):'—'},
+    {key:'_added_blocks', label:'Added Blocks', compute: a=>a.aug_count>0?Math.floor(a.bol_block_count*0.3*a.aug_count):'—'},
+    {key:'_added_pcs', label:'Added PCS', compute: a=>a.aug_count>0?Math.floor(a.bol_pcs_count*0.3*a.aug_count):'—'},
+    {key:'aug_capex_npv_M', label:'Aug Total Cost ($M)', fmt: v=>v>0?'$'+v.toFixed(2)+'M':'$0'},
+  ],
+};
+
+const GRAPH_TABS = {
+  overview: [
+    {field:'lifecycle_npv', label:'Lifecycle NPV ($M)', type:'numeric', bins:15, precision:1},
+    {field:'effective_price', label:'Effective Price ($/kWh)', type:'numeric', bins:12, precision:0},
+    {field:'aug_count', label:'Augmentation Events', type:'numeric', bins:5, precision:0},
+    {field:'footprint', label:'Footprint (acres)', type:'numeric', bins:12, precision:1},
+  ],
+  lifecycle: [
+    {field:'bol_capex_M', label:'BOL CapEx ($M)', type:'numeric', bins:12, precision:1},
+    {field:'aug_capex_npv_M', label:'Augmentation CapEx ($M)', type:'numeric', bins:10, precision:1},
+    {field:'opex_npv_M', label:'OpEx NPV ($M)', type:'numeric', bins:10, precision:1},
+    {field:'itc_benefit_M', label:'ITC Benefit ($M)', type:'numeric', bins:10, precision:1},
+    {field:'lifecycle_npv', label:'Lifecycle Cost ($M)', type:'numeric', bins:15, precision:1},
+  ],
+  supply: [
+    {field:'_location', label:'Cell Factory Location', type:'categorical', compute: a=>SUPPLY_DATA[a.block_name]?.location||'Unknown'},
+    {field:'_feoc', label:'FEOC Risk Rating', type:'categorical', compute: a=>SUPPLY_DATA[a.block_name]?.feoc||'Unknown'},
+    {field:'_integration', label:'Vertical Integration', type:'categorical', compute: a=>SUPPLY_DATA[a.block_name]?.integration||'Unknown'},
+    {field:'_capacity', label:'Global Mfg Capacity', type:'categorical', compute: a=>SUPPLY_DATA[a.block_name]?.capacity||'Unknown'},
+  ],
+  bol: [
+    {field:'bol_block_count', label:'Block Count', type:'numeric', bins:10, precision:0},
+    {field:'bol_pcs_count', label:'PCS Count', type:'numeric', bins:8, precision:0},
+    {field:'footprint', label:'BOL Install Area (ac)', type:'numeric', bins:10, precision:1},
+  ],
+  cm: [
+    {field:'aug_count', label:'Augmentation Events', type:'numeric', bins:5, precision:0},
+    {field:'aug_capex_npv_M', label:'Aug Total Cost ($M)', type:'numeric', bins:10, precision:1},
+    {field:'bol_block_count', label:'BOL Block Count', type:'numeric', bins:10, precision:0},
+  ],
+};
+
+const GR={};
+['lifecycle_npv','aug_count','footprint','effective_price','bol_block_count','bol_pcs_count','bol_capex_M','aug_capex_npv_M','opex_npv_M','itc_benefit_M'].forEach(f=>{const v=allArchs.map(a=>a[f]);GR[f]={min:Math.min(...v),max:Math.max(...v)}});
+
+const clusters=[
+  {id:0,name:'Cost-Optimized',badge:'Lowest Cost',bc:'b-cost',color:'#10697d',archs:[],preset:{cost:10,aug:2,foot:2,price:3}},
+  {id:1,name:'Balanced',badge:'Best Trade-off',bc:'b-bal',color:'#d4a520',archs:[],preset:{cost:6,aug:6,foot:4,price:4}},
+  {id:2,name:'Zero Augmentation',badge:'Simplest Ops',bc:'b-prem',color:'#7c3aed',archs:[],preset:{cost:2,aug:10,foot:1,price:3}},
+  {id:3,name:'Compact Footprint',badge:'Smallest Site',bc:'b-comp',color:'#07d2ed',archs:[],preset:{cost:3,aug:2,foot:10,price:3}},
+];
+
+const feats=allArchs.map(a=>[a.lifecycle_npv,a.aug_count,a.footprint]);
+const mn=[Infinity,Infinity,Infinity],mx=[-Infinity,-Infinity,-Infinity];
+feats.forEach(f=>f.forEach((v,i)=>{mn[i]=Math.min(mn[i],v);mx[i]=Math.max(mx[i],v)}));
+const nm=feats.map(f=>f.map((v,i)=>(v-mn[i])/(mx[i]-mn[i]+.001)));
+const ctrs=[[.15,.7,.3],[.35,.3,.4],[.55,.05,.7],[.3,.4,.15]];
+nm.forEach((n,i)=>{let md=9e9,bc=0;ctrs.forEach((c,ci)=>{const d=Math.sqrt(c.reduce((s,v,j)=>s+(v-n[j])**2,0));if(d<md){md=d;bc=ci}});allArchs[i].cluster=bc;clusters[bc].archs.push(allArchs[i])});
+clusters.forEach(c=>c.archs.sort((a,b)=>a.lifecycle_npv-b.lifecycle_npv));
+
+const state={
+  view:'overview',
+  graphTab:'overview',
+  graphPage:0,
+  tableTab:'overview',
+  filters:{lifecycle_npv:null,aug_count:null,footprint:null,effective_price:null},
+  catFilters:{},
+  weights:{cost:8,aug:5,foot:3,price:4},
+  sortField:'score',
+  sortDir:'desc',
+  pinned:new Set(),
+  presetActive:null,
+  tableSort:{field:'lifecycle_npv',dir:'desc'},
+  compareTab:'lifecycle',
+  archScheduleChoice:{},
+  activeSchedules:null
+};
+
+const charts={};
+
+function destroyChart(k){if(charts[k]){charts[k].destroy();delete charts[k]}}
+
+function getChartColors(){
+  const dk=document.documentElement.getAttribute('data-theme')==='dark';
+  return {text:dk?'#d1d3d4':'#636466',grid:dk?'#2c2c2e':'#E2E8F0',legend:dk?'#f0f0f0':'#000'};
+}
+
+function score(a){const w=state.weights,t=w.cost+w.aug+w.foot+w.price||1;
+  const n=(v,f)=>1-((v-GR[f].min)/(GR[f].max-GR[f].min+.001));
+  return(w.cost/t)*n(a.lifecycle_npv,'lifecycle_npv')+(w.aug/t)*n(a.aug_count,'aug_count')+(w.foot/t)*n(a.footprint,'footprint')+(w.price/t)*n(a.effective_price,'effective_price')}
+
+function cstats(c){const a=c.archs;if(!a.length)return{};const avg=r=>r.reduce((s,v)=>s+v,0)/r.length;
+  const npvs=a.map(x=>x.lifecycle_npv).sort((a,b)=>a-b),prices=a.map(x=>x.effective_price).sort((a,b)=>a-b);
+  return{count:a.length,npv_min:Math.min(...npvs).toFixed(1),npv_max:Math.max(...npvs).toFixed(1),npv_med:npvs[Math.floor(npvs.length/2)].toFixed(1),
+    price_med:prices[Math.floor(prices.length/2)].toFixed(0),foot_avg:avg(a.map(x=>x.footprint)).toFixed(1),aug_avg:avg(a.map(x=>x.aug_count)).toFixed(1),
+    top_blocks:[...new Set(a.slice(0,20).map(x=>x.block_name))].slice(0,2)}}
+
+document.getElementById('viewTabs').addEventListener('click',e=>{const t=e.target.closest('.view-tab');if(!t)return;switchView(t.dataset.view)});
+function switchView(v){state.view=v;document.querySelectorAll('.view-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));
+  ['overviewView','exploreView'].forEach(id=>document.getElementById(id).classList.toggle('visible',id===v+'View'));
+  if(v==='overview')setTimeout(()=>renderOverview(),50);
+  if(v==='explore')setTimeout(()=>renderExplore(),50)}
+
+document.getElementById('graphTabs').addEventListener('click',e=>{
+  const tab=e.target.closest('.ov-tab');
+  if(!tab) return;
+  state.graphTab=tab.dataset.gtab;
+  state.graphPage=0;
+  document.querySelectorAll('#graphTabs .ov-tab').forEach(t=>t.classList.toggle('active',t.dataset.gtab===state.graphTab));
+  renderGraphSection();
+});
+
+document.getElementById('tableTabs').addEventListener('click',e=>{
+  const tab=e.target.closest('.ov-tab');
+  if(!tab) return;
+  state.tableTab=tab.dataset.ttab;
+  document.querySelectorAll('#tableTabs .ov-tab').forEach(t=>t.classList.toggle('active',t.dataset.ttab===state.tableTab));
+  renderTable();
+});
+
+function getFilteredArchs() {
+  return allArchs.filter(a => {
+    for (const [field, range] of Object.entries(state.filters)) {
+      if (range && (a[field] < range.min || a[field] >= range.max)) return false;
+    }
+    for (const [field, values] of Object.entries(state.catFilters)) {
+      if (values && values.size > 0) {
+        const cfg = Object.values(GRAPH_TABS).flat().find(g => g.field === field);
+        if (cfg && cfg.compute) {
+          const val = cfg.compute(a);
+          if (!values.has(val)) return false;
+        }
+      }
+    }
+    return true;
+  });
+}
+
+function renderFilterBar() {
+  const bar = document.getElementById('filterBar');
+  const activeFilters = Object.entries(state.filters).filter(([k,v]) => v !== null);
+  const activeCatFilters = Object.entries(state.catFilters).filter(([k,v]) => v && v.size > 0);
+  const filtered = getFilteredArchs();
+
+  if (activeFilters.length === 0 && activeCatFilters.length === 0) {
+    bar.className = 'filter-bar';
+    bar.innerHTML = '';
+    return;
+  }
+
+  bar.className = 'filter-bar has-filters';
+  const fieldLabels = {lifecycle_npv:'NPV',aug_count:'Aug Events',footprint:'Footprint',effective_price:'Eff. Price',
+    _location:'Location',_feoc:'FEOC',_integration:'Integration',_capacity:'Capacity'};
+  const fieldUnits = {lifecycle_npv:'$M',aug_count:'',footprint:'ac',effective_price:'$/kWh',_location:'',_feoc:'',_integration:'',_capacity:''};
+
+  let html = `<span class="filter-count">${filtered.length} of ${allArchs.length} architectures</span>`;
+  activeFilters.forEach(([field, range]) => {
+    const label = fieldLabels[field];
+    const unit = fieldUnits[field];
+    const rangeText = `${range.min.toFixed(1)}–${range.max.toFixed(1)} ${unit}`;
+    html += `<span class="filter-tag">${label}: ${rangeText}<span class="remove" onclick="clearFilter('${field}')">&times;</span></span>`;
+  });
+  activeCatFilters.forEach(([field, values]) => {
+    const label = fieldLabels[field];
+    const arr = Array.from(values);
+    const display = arr.length > 2 ? `${arr[0]} + ${arr.length-1} more` : arr.join(', ');
+    html += `<span class="filter-tag">${label}: ${display}<span class="remove" onclick="clearCatFilter('${field}')">&times;</span></span>`;
+  });
+  html += `<span class="filter-clear" onclick="clearAllFilters()">Clear All</span>`;
+  bar.innerHTML = html;
+}
+
+window.clearFilter = function(field) {
+  state.filters[field] = null;
+  renderOverview();
+};
+
+window.clearCatFilter = function(field) {
+  state.catFilters[field] = new Set();
+  renderOverview();
+};
+
+window.clearAllFilters = function() {
+  Object.keys(state.filters).forEach(k => state.filters[k] = null);
+  Object.keys(state.catFilters).forEach(k => state.catFilters[k] = new Set());
+  renderOverview();
+};
+
+function getGraphsForTab() {
+  return GRAPH_TABS[state.graphTab] || [];
+}
+
+function getGraphPage() {
+  const all = getGraphsForTab();
+  const start = state.graphPage * 4;
+  return all.slice(start, start + 4);
+}
+
+function getTotalGraphPages() {
+  return Math.ceil(getGraphsForTab().length / 4);
+}
+
+window.pageGraphs = function(delta) {
+  const maxPages = getTotalGraphPages();
+  state.graphPage = Math.max(0, Math.min(maxPages - 1, state.graphPage + delta));
+  renderGraphSection();
+};
+
+function renderGraphSlot(slotId, config) {
+  const slot = document.getElementById(slotId);
+  if (!config) { slot.innerHTML = ''; slot.style.display = 'none'; return; }
+  slot.style.display = 'block';
+
+  const canvasId = 'gCanvas_' + slotId;
+  let html = `<h3 style="font-size:14px;font-weight:600;margin-bottom:8px">${config.label}</h3>
+    <div style="position:relative;height:160px"><canvas id="${canvasId}"></canvas></div>`;
+
+  if (config.type === 'numeric') {
+    html += `<div class="range-row"><label>Min</label><input class="range-input" id="rMin_${slotId}" type="number" placeholder="min"><label>Max</label><input class="range-input" id="rMax_${slotId}" type="number" placeholder="max"><button class="range-apply" onclick="applySlotRange('${slotId}','${config.field}')">Apply</button></div>`;
+  }
+
+  slot.innerHTML = html;
+
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const filteredArchs = getFilteredArchs();
+  const chartColors = getChartColors();
+
+  if (config.type === 'numeric') {
+    const allVals = allArchs.map(a => a[config.field]);
+    const gMin = Math.min(...allVals), gMax = Math.max(...allVals);
+    const bw = (gMax - gMin) / config.bins || 1;
+
+    const counts = new Array(config.bins).fill(0);
+    filteredArchs.forEach(a => {
+      const bi = Math.min(config.bins - 1, Math.floor((a[config.field] - gMin) / bw));
+      if (bi >= 0) counts[bi]++;
+    });
+
+    const labels = Array.from({length:config.bins}, (_,i) => {
+      const v = gMin + i * bw;
+      return config.precision === 0 ? v.toFixed(0) : v.toFixed(1);
+    });
+
+    const af = state.filters[config.field];
+    let selStart = -1, selEnd = -1;
+    if (af) {
+      selStart = Math.max(0, Math.floor((af.min - gMin) / bw));
+      selEnd = Math.min(config.bins - 1, Math.floor((af.max - gMin) / bw - 0.001));
+    }
+
+    const bgColors = counts.map((_,i) => (i >= selStart && i <= selEnd && selStart >= 0) ? '#ffcc43' : '#10697d');
+    const borderColors = counts.map((_,i) => (i >= selStart && i <= selEnd && selStart >= 0) ? '#d4a520' : '#0b4f5e');
+
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(ctx, {
+      type:'bar',
+      data:{labels, datasets:[{label:config.label, data:counts, backgroundColor:bgColors, borderColor:borderColors, borderWidth:1, borderRadius:3}]},
+      options:{responsive:true, maintainAspectRatio:false,
+        animation:{duration:150},
+        plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:chartColors.text,maxTicksLimit:6,font:{size:10}},grid:{display:false}},
+                y:{ticks:{color:chartColors.text,font:{size:10}},grid:{color:chartColors.grid}}},
+        onClick: (event, elements) => {
+          if (elements.length > 0) {
+            const binIndex = elements[0].index;
+            const binMin = gMin + binIndex * bw;
+            const binMax = binMin + bw;
+            if (selStart === binIndex && selEnd === binIndex) {
+              state.filters[config.field] = null;
+            } else {
+              state.filters[config.field] = {min: binMin, max: binMax};
+            }
+            renderOverview();
+          }
+        }
+      },
+    });
+
+    const chartWrap = document.getElementById(canvasId).parentElement;
+    chartWrap.style.cursor = 'crosshair';
+    let dragOverlay = chartWrap.querySelector('.drag-overlay');
+    if (!dragOverlay) {
+      dragOverlay = document.createElement('div');
+      dragOverlay.className = 'drag-overlay';
+      chartWrap.appendChild(dragOverlay);
+    }
+    let dStart = 0, dActive = false, dMoved = false;
+    chartWrap.addEventListener('mousedown', e => {
+      dActive = true; dStart = e.offsetX; dMoved = false;
+      dragOverlay.style.display = 'block'; dragOverlay.style.left = dStart + 'px'; dragOverlay.style.width = '0px';
+    });
+    chartWrap.addEventListener('mousemove', e => {
+      if (!dActive) return;
+      const x = e.offsetX, left = Math.min(dStart, x), w = Math.abs(x - dStart);
+      if (w > 5) dMoved = true;
+      dragOverlay.style.left = left + 'px'; dragOverlay.style.width = w + 'px';
+    });
+    chartWrap.addEventListener('mouseup', e => {
+      if (!dActive) return; dActive = false; dragOverlay.style.display = 'none';
+      if (!dMoved) return;
+      const chart = charts[canvasId]; if (!chart || !chart.chartArea) return;
+      const ca = chart.chartArea;
+      const startPx = Math.min(dStart, e.offsetX), endPx = Math.max(dStart, e.offsetX);
+      const startBin = Math.max(0, Math.floor((startPx - ca.left) / (ca.right - ca.left) * config.bins));
+      const endBin = Math.min(config.bins - 1, Math.floor((endPx - ca.left) / (ca.right - ca.left) * config.bins));
+      if (startBin <= endBin) {
+        state.filters[config.field] = {min: gMin + startBin * bw, max: gMin + (endBin + 1) * bw};
+        renderOverview();
+      }
+    });
+    chartWrap.addEventListener('mouseleave', () => { if (dActive) { dActive = false; dragOverlay.style.display = 'none'; } });
+
+    const rMinEl = document.getElementById('rMin_' + slotId), rMaxEl = document.getElementById('rMax_' + slotId);
+    if (af) {
+      rMinEl.value = af.min.toFixed(config.precision);
+      rMaxEl.value = af.max.toFixed(config.precision);
+    } else {
+      rMinEl.value = '';
+      rMaxEl.value = '';
+    }
+  } else if (config.type === 'categorical') {
+    // Categorical horizontal bar chart
+    const allVals = allArchs.map(a => config.compute(a));
+    const uniqueVals = [...new Set(allVals)].sort();
+    // Count from filtered architectures, excluding this field's own filter
+    const otherFiltered = allArchs.filter(a => {
+      for (const [f, range] of Object.entries(state.filters)) {
+        if (range && (a[f] < range.min || a[f] >= range.max)) return false;
+      }
+      for (const [f, values] of Object.entries(state.catFilters)) {
+        if (f === config.field) continue;
+        if (values && values.size > 0) {
+          const cfg2 = Object.values(GRAPH_TABS).flat().find(g => g.field === f);
+          if (cfg2 && cfg2.compute && !values.has(cfg2.compute(a))) return false;
+        }
+      }
+      return true;
+    });
+    const filteredVals = otherFiltered.map(a => config.compute(a));
+    const counts = uniqueVals.map(u => filteredVals.filter(v => v === u).length);
+    const catFilter = state.catFilters[config.field] || new Set();
+    const bgColors = uniqueVals.map(u => catFilter.has(u) ? '#ffcc43' : '#10697d');
+    const borderColors = uniqueVals.map(u => catFilter.has(u) ? '#d4a520' : '#0b4f5e');
+
+    destroyChart(canvasId);
+    charts[canvasId] = new Chart(ctx, {
+      type:'bar',
+      data:{labels:uniqueVals, datasets:[{label:config.label, data:counts, backgroundColor:bgColors, borderColor:borderColors, borderWidth:1, borderRadius:3}]},
+      options:{responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        animation:{duration:150},
+        plugins:{legend:{display:false}},
+        scales:{x:{ticks:{color:chartColors.text,font:{size:10}},grid:{color:chartColors.grid}},
+                y:{ticks:{color:chartColors.text,font:{size:11,weight:'bold'}},grid:{display:false}}},
+        onClick: (event, elements) => {
+          if (elements.length > 0) {
+            const idx = elements[0].index;
+            const val = uniqueVals[idx];
+            if (!state.catFilters[config.field]) state.catFilters[config.field] = new Set();
+            if (state.catFilters[config.field].has(val)) {
+              state.catFilters[config.field].delete(val);
+            } else {
+              state.catFilters[config.field].add(val);
+            }
+            renderOverview();
+          }
+        }
+      }
+    });
+  }
+}
+
+function renderGraphSection() {
+  applyChartDefaults();
+  document.querySelectorAll('#graphTabs .ov-tab').forEach(t => t.classList.toggle('active', t.dataset.gtab === state.graphTab));
+
+  const isScatter = state.graphTab === 'scatter';
+  document.getElementById('graphGrid').style.display = isScatter ? 'none' : 'grid';
+  document.getElementById('scatterPanel').style.display = isScatter ? 'block' : 'none';
+  document.querySelector('.page-nav').style.display = isScatter ? 'none' : 'flex';
+
+  if (isScatter) {
+    renderScatterExplorer();
+    return;
+  }
+
+  const pageGraphs = getGraphPage();
+  const totalPages = getTotalGraphPages();
+
+  for (let i = 0; i < 4; i++) {
+    try{renderGraphSlot('gSlot' + i, pageGraphs[i])}catch(e){console.error('Chart slot '+i+' error:',e)}
+  }
+
+  document.getElementById('graphPageInfo').textContent = `${state.graphPage + 1} / ${totalPages}`;
+  document.getElementById('graphPrev').disabled = state.graphPage === 0;
+  document.getElementById('graphNext').disabled = state.graphPage >= totalPages - 1;
+}
+
+window.applySlotRange = function(slotId, field) {
+  const minVal = parseFloat(document.getElementById('rMin_' + slotId).value);
+  const maxVal = parseFloat(document.getElementById('rMax_' + slotId).value);
+  if (isNaN(minVal) && isNaN(maxVal)) {
+    state.filters[field] = null;
+  } else {
+    const allVals = allArchs.map(a => a[field]);
+    const gMin = Math.min(...allVals), gMax = Math.max(...allVals);
+    const lo = isNaN(minVal) ? gMin : minVal;
+    const hi = isNaN(maxVal) ? gMax : maxVal;
+    state.filters[field] = {min:Math.min(lo,hi), max:Math.max(lo,hi)};
+  }
+  renderOverview();
+};
+
+window.updateSlider = function(dim, val) {
+  if (dim === 'cost') { state.weights.cost = parseInt(val); document.getElementById('wCost').textContent = val + '/10'; }
+  else if (dim === 'aug') { state.weights.aug = parseInt(val); document.getElementById('wAug').textContent = val + '/10'; }
+  else if (dim === 'foot') { state.weights.foot = parseInt(val); document.getElementById('wFoot').textContent = val + '/10'; }
+  else if (dim === 'price') { state.weights.price = parseInt(val); document.getElementById('wPrice').textContent = val + '/10'; }
+
+  updatePresetTag();
+  renderTable();
+};
+
+function updatePresetTag() {
+  const tag = document.getElementById('presetTag');
+  const w = state.weights;
+  const isPreset = clusters.some(c => c.preset.cost === w.cost && c.preset.aug === w.aug && c.preset.foot === w.foot && c.preset.price === w.price);
+  tag.classList.toggle('visible', isPreset);
+}
+
+function renderClusterChips() {
+  const el = document.getElementById('clusterChips');
+  el.innerHTML = '';
+  clusters.forEach(c => {
+    const chip = document.createElement('div');
+    chip.className = 'fchip';
+    chip.textContent = c.name;
+    chip.onclick = () => {
+      state.weights = {...c.preset};
+      document.getElementById('sliderCost').value = c.preset.cost;
+      document.getElementById('sliderAug').value = c.preset.aug;
+      document.getElementById('sliderFoot').value = c.preset.foot;
+      document.getElementById('sliderPrice').value = c.preset.price;
+      document.getElementById('wCost').textContent = c.preset.cost + '/10';
+      document.getElementById('wAug').textContent = c.preset.aug + '/10';
+      document.getElementById('wFoot').textContent = c.preset.foot + '/10';
+      document.getElementById('wPrice').textContent = c.preset.price + '/10';
+      updatePresetTag();
+      renderTable();
+    };
+    el.appendChild(chip);
+  });
+}
+
+function renderSelectedArchsCard(){
+  const el=document.getElementById('selectedArchsCard');
+  if(state.pinned.size===0){el.innerHTML='';el.className='';return}
+  const pinned=Array.from(state.pinned).map(id=>allArchs[id]);
+  const colors=['#10697d','#d4a520','#c8215b','#07d2ed','#7c3aed'];
+  el.className='selected-archs-bar';
+  let html='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+  html+='<span style="font-size:12px;font-weight:700;color:var(--text-primary);white-space:nowrap">Compare ('+pinned.length+'):</span>';
+  pinned.forEach((a,i)=>{
+    html+=`<div class="selected-arch-chip" style="border-color:${colors[i%5]}">
+      <span style="width:6px;height:6px;border-radius:50%;background:${colors[i%5]};flex-shrink:0"></span>
+      <span style="font-weight:600">${a.block_name}</span>
+      <span style="color:var(--text-muted)">+ ${a.pcs_name}</span>
+      <button style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:0;line-height:1" onclick="event.stopPropagation();state.pinned.delete(${a.id});renderSelectedArchsCard();renderTable();updateCompareTabState()">✕</button>
+    </div>`;
+  });
+  html+='<a style="font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;white-space:nowrap;margin-left:auto" onclick="switchView(\'explore\')">Open Compare →</a>';
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function renderTable() {
+  const filtered = getFilteredArchs();
+  let sorted = filtered.map(a => ({...a, score: score(a)}));
+
+  sorted.sort((a, b) => {
+    const field = state.tableSort.field;
+    let aVal = a[field];
+    let bVal = b[field];
+
+    if (typeof aVal === 'string') {
+      return state.tableSort.dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    }
+    return state.tableSort.dir === 'asc' ? aVal - bVal : bVal - aVal;
+  });
+
+  const topN = sorted.slice(0, 25);
+  const colDefs = OV_TAB_COLS[state.tableTab] || OV_TAB_COLS.overview;
+
+  const thead = document.getElementById('tHead');
+  const scoreSorted = state.tableSort.field === 'score';
+  const scoreArrow = scoreSorted ? (state.tableSort.dir === 'asc' ? '▲' : '▼') : '';
+  let headerHtml = `<tr><th style="min-width:30px">#</th><th>System</th><th class="${scoreSorted?'sorted':''}" onclick="sortTable('score')" style="min-width:70px">Score ${scoreArrow}</th>`;
+  colDefs.forEach(col => {
+    const isSorted = state.tableSort.field === col.key;
+    const arrow = isSorted ? (state.tableSort.dir === 'asc' ? '▲' : '▼') : '';
+    headerHtml += `<th class="${isSorted ? 'sorted' : ''}" onclick="sortTable('${col.key}')">${col.label} ${arrow}</th>`;
+  });
+  headerHtml += '<th></th></tr>';
+  thead.innerHTML = headerHtml;
+
+  const tbody = document.getElementById('tBody');
+  tbody.innerHTML = '';
+  topN.forEach((a, i) => {
+    const tr = document.createElement('tr');
+    tr.className = i < 3 ? 'rec' : '';
+    const scoreVal = Math.round(a.score * 100);
+    const scoreColor = scoreVal >= 70 ? '#10697d' : scoreVal >= 40 ? '#d4a520' : '#c8215b';
+
+    let html = `<td style="text-align:center;font-weight:600">${i+1}</td>`;
+    html += `<td><div class="pc"><div class="bl">${a.block_name}</div><div class="ps">${a.pcs_name}</div></div></td>`;
+    html += `<td><div style="display:flex;align-items:center;gap:6px"><div style="width:36px;height:8px;background:var(--border-light);border-radius:4px;overflow:hidden"><div style="width:${scoreVal}%;height:100%;border-radius:4px;background:${scoreColor}"></div></div><span style="font-weight:700;font-size:13px">${scoreVal}</span></div></td>`;
+
+    colDefs.forEach(col => {
+      let val = col.compute ? col.compute(a) : a[col.key];
+      let display = col.fmt ? col.fmt(val) : val;
+      html += `<td>${display}</td>`;
+    });
+
+    const isPinned = state.pinned.has(a.id);
+    html += `<td><button class="compare-btn ${isPinned?'added':''}" data-id="${a.id}">${isPinned?'✓':'+'}</button></td>`;
+
+    tr.innerHTML = html;
+    tr.querySelector('.compare-btn').addEventListener('click', function() {
+      const id = parseInt(this.dataset.id);
+      if (state.pinned.has(id)) {
+        state.pinned.delete(id);
+      } else {
+        state.pinned.add(id);
+      }
+      renderTable();
+      renderSelectedArchsCard();
+      updateCompareTabState();
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('tTitle').innerText = `Architectures by ${state.tableTab === 'overview' ? 'Overview' : state.tableTab === 'lifecycle' ? 'Lifecycle Costs' : state.tableTab === 'supply' ? 'Supply' : state.tableTab === 'bol' ? 'BOL' : 'Capacity Maintenance'}`;
+  document.getElementById('tMeta').innerText = `Showing ${Math.min(25, topN.length)} of ${filtered.length}`;
+
+  updateCompareTabState();
+}
+
+function updateCompareTabState(){
+  const compareTab=document.getElementById('compareTab');
+  if(compareTab){compareTab.classList.toggle('disabled',state.pinned.size===0)}
+}
+
+window.sortTable = function(field) {
+  if (state.tableSort.field === field) {
+    state.tableSort.dir = state.tableSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    state.tableSort.field = field;
+    state.tableSort.dir = 'desc';
+  }
+  renderTable();
+};
+
+function renderKPIs() {
+  const filtered = getFilteredArchs();
+  const avg = r => r.reduce((s,v)=>s+v,0)/r.length;
+  const kpiData = [
+    {label:'Avg Lifecycle Cost', value:'$' + avg(filtered.map(a=>a.lifecycle_npv)).toFixed(1) + 'M', min:GR.lifecycle_npv.min.toFixed(0), max:GR.lifecycle_npv.max.toFixed(0), highlight:true},
+    {label:'Avg Eff. Price', value:'$' + avg(filtered.map(a=>a.effective_price)).toFixed(0) + '/kWh', min:GR.effective_price.min.toFixed(0), max:GR.effective_price.max.toFixed(0), highlight:false},
+    {label:'Avg Augmentation', value:avg(filtered.map(a=>a.aug_count)).toFixed(1), min:GR.aug_count.min.toFixed(0), max:GR.aug_count.max.toFixed(0), highlight:false},
+    {label:'Avg Footprint', value:avg(filtered.map(a=>a.footprint)).toFixed(1) + ' ac', min:GR.footprint.min.toFixed(0), max:GR.footprint.max.toFixed(0), highlight:false},
+    {label:'Avg Blocks', value:Math.round(avg(filtered.map(a=>a.bol_block_count))), min:GR.bol_block_count.min.toFixed(0), max:GR.bol_block_count.max.toFixed(0), highlight:false},
+    {label:'Avg PCS Count', value:Math.round(avg(filtered.map(a=>a.bol_pcs_count))), min:GR.bol_pcs_count.min.toFixed(0), max:GR.bol_pcs_count.max.toFixed(0), highlight:false},
+  ];
+
+  let html = '';
+  kpiData.forEach(kpi => {
+    const range = parseFloat(kpi.max) - parseFloat(kpi.min) || 1;
+    const midVal = (parseFloat(kpi.min) + parseFloat(kpi.max)) / 2;
+    const fill = ((parseFloat(kpi.value) - parseFloat(kpi.min)) / range) * 100;
+    html += `<div class="kpi ${kpi.highlight?'highlight':''}">
+      <div class="kpi-label">${kpi.label}</div>
+      <div class="kpi-value">${kpi.value}</div>
+      <div class="kpi-range">
+        <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.min(100,Math.max(0,fill))}%"></div></div>
+      </div>
+      <div class="kpi-minmax"><span>${kpi.min}</span><span>${kpi.max}</span></div>
+    </div>`;
+  });
+  document.getElementById('kpiStrip').innerHTML = html;
+}
+
+function renderOvInsights() {
+  const el = document.getElementById('ovIns');
+  const s0 = cstats(clusters[0]), s2 = cstats(clusters[2]), s3 = cstats(clusters[3]), s1 = cstats(clusters[1]);
+  const d = (parseFloat(s2.npv_med) - parseFloat(s0.npv_med)).toFixed(1);
+  const sp = (parseFloat(s1.npv_max) - parseFloat(s0.npv_min)).toFixed(1);
+  const fd = (parseFloat(s2.foot_avg) - parseFloat(s3.foot_avg)).toFixed(1);
+  el.innerHTML = `<div class="ins"><div class="ins-icon ic-g">$</div><div class="ins-text">The <strong>cost-optimized cluster</strong> saves <strong>$${d}M</strong> vs. zero-augmentation designs, but requires ${s0.aug_avg} augmentation events on average.</div></div>
+    <div class="ins"><div class="ins-icon ic-b">⚖</div><div class="ins-text"><strong>82% of architectures</strong> fall within <strong>$${sp}M</strong> of each other. The real differentiator is augmentation complexity and footprint — not raw cost.</div></div>
+    <div class="ins"><div class="ins-icon ic-y">!</div><div class="ins-text"><strong>Compact footprint</strong> uses <strong>${fd} fewer acres</strong> than zero-aug designs. For constrained sites, this outweighs cost differences.</div></div>`;
+}
+
+window.toggleInsights = function() {
+  const body = document.getElementById('insightsBody');
+  const arrow = document.getElementById('insightsArrow');
+  body.classList.toggle('collapsed');
+  arrow.classList.toggle('collapsed');
+};
+
+function renderOverview() {
+  applyChartDefaults();
+  renderFilterBar();
+  renderKPIs();
+  renderOvInsights();
+  renderGraphSection();
+  renderClusterChips();
+  renderSelectedArchsCard();
+  renderTable();
+  renderScatterExplorer();
+  updateCompareTabState();
+  updateOnboardingStep();
+}
+
+// Onboarding step tracking
+function updateOnboardingStep(){
+  const el=document.getElementById('onboarding');
+  if(!el||el.classList.contains('dismissed'))return;
+  const hasFilters=Object.values(state.filters).some(v=>v!==null)||Object.values(state.catFilters).some(v=>v&&v.size>0);
+  const hasCustomWeights=state.weights.cost!==8||state.weights.aug!==5||state.weights.foot!==3||state.weights.price!==4;
+  const hasPinned=state.pinned.size>0;
+  const steps=el.querySelectorAll('.ob-step');
+  steps.forEach(s=>s.classList.remove('active','completed'));
+  if(hasPinned){steps[0].classList.add('completed');steps[1].classList.add('completed');steps[2].classList.add('completed');steps[3].classList.add('active')}
+  else if(hasCustomWeights||hasPinned){steps[0].classList.add('completed');steps[1].classList.add('completed');steps[2].classList.add('active')}
+  else if(hasFilters){steps[0].classList.add('completed');steps[1].classList.add('active')}
+  else{steps[0].classList.add('active')}
+}
+
+window.dismissOnboarding=function(){
+  document.getElementById('onboarding').classList.add('dismissed');
+};
+
+// ========== FEEDBACK WIDGET ==========
+const GOOGLE_FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSfSLRo3lQEeYHsC5nq1xallJ5_zfEavHSlCJ4-6yHo4KETWmw/formResponse';
+
+const FORM_FIELDS={
+  rating:'entry.1674093267',
+  categories:'entry.792556861',
+  comment:'entry.17577590',
+  page:'entry.1521249491',
+  timestamp:'entry.616529301'
+};
+
+let fbState={rating:null,categories:[],comment:''};
+
+document.getElementById('fbTrigger').addEventListener('click',()=>{
+  document.getElementById('fbPopover').classList.add('open');
+  document.getElementById('fbBackdrop').classList.add('open');
+});
+document.getElementById('fbClose').addEventListener('click',closeFeedback);
+document.getElementById('fbBackdrop').addEventListener('click',closeFeedback);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeFeedback()});
+
+function closeFeedback(){
+  document.getElementById('fbPopover').classList.remove('open');
+  document.getElementById('fbBackdrop').classList.remove('open');
+  setTimeout(()=>{
+    document.getElementById('fbFormState').style.display='';
+    document.getElementById('fbThankYou').style.display='none';
+    fbState={rating:null,categories:[],comment:''};
+    document.querySelectorAll('.fb-rating-btn').forEach(b=>b.classList.remove('selected'));
+    document.querySelectorAll('.fb-cat-chip').forEach(c=>c.classList.remove('selected'));
+    document.getElementById('fbComment').value='';
+    const btn=document.getElementById('fbSubmit');btn.disabled=true;btn.style.opacity='0.4';
+  },300);
+}
+
+document.querySelectorAll('.fb-rating-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.fb-rating-btn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    fbState.rating=parseInt(btn.dataset.rating);
+    const sub=document.getElementById('fbSubmit');sub.disabled=false;sub.style.opacity='1';
+  });
+});
+
+document.querySelectorAll('.fb-cat-chip').forEach(chip=>{
+  chip.addEventListener('click',()=>{
+    chip.classList.toggle('selected');
+    const cat=chip.dataset.cat;
+    if(fbState.categories.includes(cat))fbState.categories=fbState.categories.filter(c=>c!==cat);
+    else fbState.categories.push(cat);
+  });
+});
+
+document.getElementById('fbSubmit').addEventListener('click',()=>{
+  fbState.comment=document.getElementById('fbComment').value.trim();
+
+  // Silent Google Form submission via hidden iframe
+  const formData=new URLSearchParams();
+  formData.append(FORM_FIELDS.rating,fbState.rating);
+  formData.append(FORM_FIELDS.categories,fbState.categories.join(', '));
+  formData.append(FORM_FIELDS.comment,fbState.comment);
+  formData.append(FORM_FIELDS.page,state.view+' / '+(state.view==='overview'?state.graphTab:state.compareTab));
+  formData.append(FORM_FIELDS.timestamp,new Date().toISOString());
+
+  // Submit via hidden iframe to avoid CORS issues
+  const iframe=document.getElementById('fbIframe');
+  const form=document.createElement('form');
+  form.method='POST';form.action=GOOGLE_FORM_URL;form.target='fbIframe';form.style.display='none';
+  for(const[key,val]of formData.entries()){
+    const input=document.createElement('input');input.type='hidden';input.name=key;input.value=val;form.appendChild(input);
+  }
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+
+  console.log('Feedback submitted silently:',JSON.stringify(fbState));
+
+  document.getElementById('fbFormState').style.display='none';
+  document.getElementById('fbThankYou').style.display='block';
+  setTimeout(()=>{closeFeedback();showToast('Feedback submitted — thank you!')},1800);
+});
+
+const SCATTER_FIELDS = [
+  {key:'lifecycle_npv', label:'Lifecycle NPV ($M)', type:'numeric'},
+  {key:'effective_price', label:'Effective Price ($/kWh)', type:'numeric'},
+  {key:'aug_count', label:'Augmentation Events', type:'numeric'},
+  {key:'footprint', label:'Footprint (acres)', type:'numeric'},
+  {key:'bol_block_count', label:'BOL Block Count', type:'numeric'},
+  {key:'bol_pcs_count', label:'BOL PCS Count', type:'numeric'},
+  {key:'bol_capex_M', label:'BOL CapEx ($M)', type:'numeric'},
+  {key:'aug_capex_npv_M', label:'Aug CapEx ($M)', type:'numeric'},
+  {key:'opex_npv_M', label:'OpEx ($M)', type:'numeric'},
+  {key:'itc_benefit_M', label:'ITC Benefit ($M)', type:'numeric'},
+  {key:'_feoc', label:'FEOC Risk Rating', type:'categorical', compute: a=>SUPPLY_DATA[a.block_name]?.feoc||'Unknown'},
+  {key:'_location', label:'Cell Factory Location', type:'categorical', compute: a=>SUPPLY_DATA[a.block_name]?.location||'Unknown'},
+  {key:'_integration', label:'Vertical Integration', type:'categorical', compute: a=>SUPPLY_DATA[a.block_name]?.integration||'Unknown'},
+  {key:'_cluster', label:'Strategy Cluster', type:'categorical', compute: a=>clusters[a.cluster]?.name||'Unknown'},
+];
+
+function initScatterSelectors(){
+  const xSel=document.getElementById('scatX'), ySel=document.getElementById('scatY'), cSel=document.getElementById('scatColor');
+  SCATTER_FIELDS.forEach((f,i)=>{
+    const xOpt=document.createElement('option'); xOpt.value=i; xOpt.textContent=f.label+(f.type==='categorical'?' ⬡':'');
+    const yOpt=xOpt.cloneNode(true);
+    xSel.appendChild(xOpt); ySel.appendChild(yOpt);
+  });
+  const catFields=SCATTER_FIELDS.filter(f=>f.type==='categorical');
+  catFields.forEach((f,i)=>{
+    const opt=document.createElement('option'); opt.value=f.key; opt.textContent=f.label;
+    cSel.appendChild(opt);
+  });
+  xSel.value='1'; ySel.value='0'; cSel.value='_cluster';
+  xSel.addEventListener('change',renderScatterExplorer);
+  ySel.addEventListener('change',renderScatterExplorer);
+  cSel.addEventListener('change',renderScatterExplorer);
+}
+
+function getScatterVal(a, fieldDef){
+  if(fieldDef.compute) return fieldDef.compute(a);
+  return a[fieldDef.key];
+}
+
+function renderScatterExplorer(){
+  destroyChart('scatCanvas');
+  const xDef=SCATTER_FIELDS[+document.getElementById('scatX').value];
+  const yDef=SCATTER_FIELDS[+document.getElementById('scatY').value];
+  const colorKey=document.getElementById('scatColor').value;
+  const colorDef=SCATTER_FIELDS.find(f=>f.key===colorKey);
+  const filtered=getFilteredArchs();
+  const chartColors=getChartColors();
+  const ctx=document.getElementById('scatCanvas').getContext('2d');
+
+  const colorVals=filtered.map(a=>getScatterVal(a,colorDef));
+  const uniqueColors=[...new Set(colorVals)];
+  const palette=['#10697d','#d4a520','#7c3aed','#07d2ed','#c8215b','#2563eb','#16a34a','#ea580c'];
+
+  const xIsCat=xDef.type==='categorical', yIsCat=yDef.type==='categorical';
+  let xCats=null, yCats=null;
+  if(xIsCat) xCats=[...new Set(allArchs.map(a=>getScatterVal(a,xDef)))].sort();
+  if(yIsCat) yCats=[...new Set(allArchs.map(a=>getScatterVal(a,yDef)))].sort();
+
+  const datasets=uniqueColors.map((cv,ci)=>{
+    const groupArchs=filtered.filter(a=>getScatterVal(a,colorDef)===cv);
+    const data=groupArchs.map(a=>{
+      let xVal=getScatterVal(a,xDef);
+      let yVal=getScatterVal(a,yDef);
+      if(xIsCat) xVal=xCats.indexOf(xVal)+(Math.random()-0.5)*0.6;
+      if(yIsCat) yVal=yCats.indexOf(yVal)+(Math.random()-0.5)*0.6;
+      return {x:xVal, y:yVal, _arch:a};
+    });
+    return {
+      label:cv,
+      data:data,
+      backgroundColor:palette[ci%palette.length]+'99',
+      borderColor:palette[ci%palette.length],
+      borderWidth:1,
+      pointRadius:5,
+      pointHoverRadius:8,
+    };
+  });
+
+  const xScaleOpts=xIsCat?{
+    type:'linear',
+    title:{display:true,text:xDef.label,color:chartColors.text},
+    ticks:{color:chartColors.text,callback:v=>{const i=Math.round(v);return xCats&&xCats[i]?xCats[i]:''},stepSize:1},
+    min:-0.5, max:xCats.length-0.5,
+    grid:{color:chartColors.grid}
+  }:{
+    title:{display:true,text:xDef.label,color:chartColors.text},
+    ticks:{color:chartColors.text},
+    grid:{color:chartColors.grid}
+  };
+
+  const yScaleOpts=yIsCat?{
+    type:'linear',
+    title:{display:true,text:yDef.label,color:chartColors.text},
+    ticks:{color:chartColors.text,callback:v=>{const i=Math.round(v);return yCats&&yCats[i]?yCats[i]:''},stepSize:1},
+    min:-0.5, max:yCats.length-0.5,
+    grid:{color:chartColors.grid}
+  }:{
+    title:{display:true,text:yDef.label,color:chartColors.text},
+    ticks:{color:chartColors.text},
+    grid:{color:chartColors.grid}
+  };
+
+  charts['scatCanvas']=new Chart(ctx,{
+    type:'scatter',
+    data:{datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      animation:{duration:200},
+      plugins:{
+        legend:{labels:{color:chartColors.legend,usePointStyle:true,pointStyle:'circle',font:{size:11}}},
+        tooltip:{callbacks:{label:c=>{
+          const a=c.raw._arch;
+          if(!a) return '';
+          return `${a.block_name} + ${a.pcs_name} | NPV:$${a.lifecycle_npv.toFixed(1)}M | Aug:${a.aug_count} | ${a.footprint}ac`;
+        }}}
+      },
+      scales:{x:xScaleOpts,y:yScaleOpts}
+    }
+  });
+
+  setupScatterBrush();
+}
+
+let scatBrushInit=false;
+function setupScatterBrush(){
+  if(scatBrushInit) return;
+  scatBrushInit=true;
+  const wrap=document.getElementById('scatWrap');
+  const brush=document.getElementById('scatBrush');
+  let dActive=false,dStartX=0,dStartY=0,dMoved=false;
+
+  wrap.addEventListener('mousedown',e=>{
+    if(e.target.tagName==='SELECT'||e.target.tagName==='OPTION') return;
+    e.preventDefault();
+    const rect=wrap.getBoundingClientRect();
+    dActive=true;dStartX=e.clientX-rect.left;dStartY=e.clientY-rect.top;dMoved=false;
+    brush.style.display='block';brush.style.left=dStartX+'px';brush.style.top=dStartY+'px';
+    brush.style.width='0';brush.style.height='0';
+  });
+  wrap.addEventListener('mousemove',e=>{
+    if(!dActive)return;
+    const rect=wrap.getBoundingClientRect();
+    const x=e.clientX-rect.left,y=e.clientY-rect.top;
+    if(Math.abs(x-dStartX)>5||Math.abs(y-dStartY)>5)dMoved=true;
+    brush.style.left=Math.min(dStartX,x)+'px';brush.style.top=Math.min(dStartY,y)+'px';
+    brush.style.width=Math.abs(x-dStartX)+'px';brush.style.height=Math.abs(y-dStartY)+'px';
+  });
+  wrap.addEventListener('mouseup',e=>{
+    if(!dActive)return;dActive=false;brush.style.display='none';
+    if(!dMoved)return;
+    const chart=charts['scatCanvas'];if(!chart)return;
+    const canvas=document.getElementById('scatCanvas');
+    const canvasRect=canvas.getBoundingClientRect();
+    const wrapRect=wrap.getBoundingClientRect();
+    const offsetX=canvasRect.left-wrapRect.left;
+    const offsetY=canvasRect.top-wrapRect.top;
+    const endX=e.clientX-wrapRect.left;
+    const endY=e.clientY-wrapRect.top;
+    const pxL=Math.min(dStartX,endX)-offsetX;
+    const pxR=Math.max(dStartX,endX)-offsetX;
+    const pxT=Math.min(dStartY,endY)-offsetY;
+    const pxB=Math.max(dStartY,endY)-offsetY;
+    const xScale=chart.scales.x,yScale=chart.scales.y;
+    const xDef=SCATTER_FIELDS[+document.getElementById('scatX').value];
+    const yDef=SCATTER_FIELDS[+document.getElementById('scatY').value];
+    let didFilter=false;
+    if(xDef.type==='numeric'){
+      const dxMin=xScale.getValueForPixel(pxL),dxMax=xScale.getValueForPixel(pxR);
+      if(dxMin!==undefined&&dxMax!==undefined){
+        state.filters[xDef.key]={min:Math.min(dxMin,dxMax),max:Math.max(dxMin,dxMax)};didFilter=true;
+      }
+    }
+    if(yDef.type==='numeric'){
+      const dyMin=yScale.getValueForPixel(pxB),dyMax=yScale.getValueForPixel(pxT);
+      if(dyMin!==undefined&&dyMax!==undefined){
+        state.filters[yDef.key]={min:Math.min(dyMin,dyMax),max:Math.max(dyMin,dyMax)};didFilter=true;
+      }
+    }
+    if(didFilter) renderOverview();
+  });
+  wrap.addEventListener('mouseleave',()=>{if(dActive){dActive=false;brush.style.display='none'}});
+}
+
+function genTimeSeriesData(arch,years=20){
+  const rng=sr(arch.id*997);const augYears=[];
+  if(arch.aug_count>0){for(let i=0;i<arch.aug_count;i++){augYears.push(Math.floor(2+i*(18/arch.aug_count)+rng()*2))}}
+  augYears.sort((a,b)=>a-b);
+  const data={energy_deployed_MWh:[],energy_available_MWh:[],lifecycle_cost_cumulative_USD:[],block_count_cumulative:[],footprint_acres:[],augmentation_years:augYears,
+    cost_breakdown:{bol_capex:arch.bol_capex_M*1e6,aug_capex:arch.aug_capex_npv_M*1e6,warranty_npv:arch.lifecycle_npv*0.12*1e6,maintenance_npv:arch.lifecycle_npv*0.08*1e6,epc_npv:arch.lifecycle_npv*0.05*1e6,ems_npv:arch.lifecycle_npv*0.03*1e6,itc_benefit:arch.itc_benefit_M*1e6}};
+  let cumCost=arch.bol_capex_M*1e6,baseE=800000+rng()*200000,cBlk=arch.bol_block_count,cFoot=arch.footprint;
+  for(let y=0;y<years;y++){
+    const soh=Math.max(0.5,1.0-0.035*y-(rng()-0.5)*0.02);
+    const avail=baseE*(1-y*0.025),deployed=avail*soh;
+    data.energy_deployed_MWh.push(+deployed.toFixed(0));data.energy_available_MWh.push(+avail.toFixed(0));
+    if(augYears.includes(y)){cumCost+=arch.aug_capex_npv_M/arch.aug_count*1e6;cBlk+=Math.floor(arch.bol_block_count*0.3);cFoot+=1.5;baseE*=1.15}
+    cumCost+=(data.cost_breakdown.warranty_npv+data.cost_breakdown.maintenance_npv+data.cost_breakdown.epc_npv+data.cost_breakdown.ems_npv)/years;
+    data.lifecycle_cost_cumulative_USD.push(+cumCost.toFixed(0));data.block_count_cumulative.push(cBlk);data.footprint_acres.push(+cFoot.toFixed(1));
+  }
+  return data;
+}
+
+function getCompareData(arch){
+  const rng=sr(arch.id*31);
+  const supply=SUPPLY_DATA[arch.block_name]||{};
+  return {
+    capex:'$'+(arch.bol_capex_M*1e6).toLocaleString(),
+    installCost:'$'+Math.floor(arch.lifecycle_npv*0.05*1e6).toLocaleString(),
+    augCapex:arch.aug_count>0?'$'+Math.floor(arch.aug_capex_npv_M*1e6).toLocaleString():'$0',
+    opex:'$'+Math.floor(arch.opex_npv_M*1e6).toLocaleString(),
+    itcBenefit:'$'+Math.floor(arch.itc_benefit_M*1e6).toLocaleString(),
+    lifecycleCost:'$'+Math.floor(arch.lifecycle_npv*1e6).toLocaleString(),
+    blockPrice:'$'+Math.floor(arch.bol_capex_M/arch.bol_block_count*1e6/1000*10).toLocaleString(),
+    pcsPrice:'$'+Math.floor(arch.bol_capex_M/arch.bol_pcs_count*1e6/1000*10).toLocaleString(),
+    emsPrice:'$'+Math.floor(arch.lifecycle_npv*0.03*1e6).toLocaleString(),
+    mvTransformer:'$'+Math.floor(arch.lifecycle_npv*0.05*1e6).toLocaleString(),
+    ul9540Cost:'$'+Math.floor(arch.lifecycle_npv*0.02*1e6).toLocaleString(),
+    productWarranty:'10 years',
+    preventMaint:'Included',
+    emsLicensing:'$'+Math.floor(arch.lifecycle_npv*0.02*1e6).toLocaleString(),
+    augInstallCost:'$'+Math.floor(arch.aug_capex_npv_M*0.15*1e6).toLocaleString(),
+    augStrategy:'Block expansion',
+    nameplate:(arch.bol_block_count*3.7).toFixed(1)+' MWh',
+    deliveredAC:(arch.bol_block_count*3.5).toFixed(1)+' MWh',
+    rte:(86+rng()*4).toFixed(2)+'%',
+    realPower:(arch.bol_pcs_count*4.5).toFixed(1)+' MW',
+    reactivePower:(arch.bol_pcs_count*2.1).toFixed(1)+' MVAr',
+    bolArea:(arch.footprint*0.6).toFixed(2)+' acres',
+    lifetimeArea:arch.footprint.toFixed(2)+' acres',
+    blockCount:arch.bol_block_count,
+    pcsCount:arch.bol_pcs_count,
+    blocksPerSkid:Math.ceil(arch.bol_block_count/Math.ceil(arch.bol_block_count/12)),
+    pcsPerSkid:Math.ceil(arch.bol_pcs_count/Math.ceil(arch.bol_pcs_count/3)),
+    blockPriceFOB:'$'+Math.floor(arch.bol_capex_M/arch.bol_block_count*0.7*1e6/1000*10).toLocaleString(),
+    includesEMS:'Yes',
+    blockTariff:'$0',
+    blockShipping:'$'+Math.floor(arch.bol_capex_M*0.08*1e6).toLocaleString(),
+    blockComm:'$'+Math.floor(arch.bol_capex_M*0.05*1e6).toLocaleString(),
+    blockWarranty:'10 years',
+    warrantyIncludesPM:'Yes',
+    cellChemistry:'LFP',
+    cRate:'0.50 C',
+    nameplateBlock:(arch.bol_block_count*3.7/arch.bol_block_count).toFixed(1)+' MWh',
+    dcRte:(84+rng()*3).toFixed(2)+'%',
+    usableDCEnergy:(arch.bol_block_count*3.5*0.9).toFixed(1)+' MWh',
+    acRte:(86+rng()*4).toFixed(2)+'%',
+    usableACEnergy:(arch.bol_block_count*3.5*0.85).toFixed(1)+' MWh',
+    minVoltage:'400V',
+    maxVoltage:'850V',
+    ul9540Status:'Certified',
+    ul9540aStatus:'Pending',
+    nfpa855Compliant:'Yes',
+    fireSuppress:'Dry chemical',
+    deflagration:'System included',
+    blockLength:'6.4 m',
+    blockWidth:'2.5 m',
+    blockHeight:'2.6 m',
+    blockWeight:(arch.bol_block_count*25)+' MT',
+    ipRating:'IP54',
+    operatingTemp:'-20 to 55°C',
+    noiseLevel:'<75 dB',
+    pcsPriceFOB:'$'+Math.floor(arch.bol_capex_M/arch.bol_pcs_count*0.6*1e6/1000*10).toLocaleString(),
+    pcsTariff:'$0',
+    pcsShipping:'$'+Math.floor(arch.bol_capex_M*0.06*1e6).toLocaleString(),
+    pcsComm:'$'+Math.floor(arch.bol_capex_M*0.03*1e6).toLocaleString(),
+    pcsWarranty:'10 years',
+    pcsWarrantyIncludesPM:'Yes',
+    pcsPmCost:'$'+Math.floor(arch.lifecycle_npv*0.015*1e6).toLocaleString(),
+    archetype:'Centralized',
+    mvTransformerIncluded:'Yes',
+    pcsPerMVSkid:'1-2',
+    cecEfficiency:'98.5%',
+    mvSkidEfficiency:'99.2%',
+    ratedPower:(arch.bol_pcs_count*5).toFixed(1)+' MW',
+    nameplatePower:(arch.bol_pcs_count*5.2).toFixed(1)+' MW',
+    dcVoltageRange:'400–850V',
+    acVoltage:'480V 3-phase',
+    pcsLength:'3.2 m',
+    pcsWidth:'2.0 m',
+    pcsHeight:'2.4 m',
+    pcsWeight:(arch.bol_pcs_count*8)+' MT',
+    pcsIPRating:'IP54',
+    pcsOperatingTemp:'-20 to 50°C',
+    systemArchetype:'Sungrow SC5000UD',
+    cellMfg:supply.location||'China',
+    feocRating:supply.feoc||'Low',
+    ownership:'OEM',
+    tier1:supply.projects||'50+',
+    taxEquityFinanced:'No',
+    domesticContent:'15%',
+    domesticContentPct:'15%',
+    cellFactory:supply.location||'Ningde',
+    packFactory:'Shenzhen',
+    containerLocation:'Hefei',
+    globalMfgCapacity:supply.capacity||'80 GWh',
+    domesticMfgCapacity:'12 GWh',
+    factoryAudit:'Yes',
+    availabilityGuarantee:'95% uptime',
+    availabilityScope:'12 months',
+    rteGuarantee:'85% RTE minimum',
+    performanceGuarantee:'99% availability'
+  };
+}
+
+function renderCompareHeader(pinned){
+  const header=document.getElementById('compareHeader');
+  const colors=['#10697d','#d4a520','#c8215b','#07d2ed','#7c3aed'];
+  let html='<div class="compare-header">';
+  pinned.forEach((a,i)=>{
+    const scoreVal=Math.round(score(a)*100);
+    const schedules=genSchedules(a);
+    const selectedSched=state.archScheduleChoice[a.id]||0;
+    html+=`<div class="compare-arch-card" style="border-color:${colors[i%colors.length]}">
+      <div class="arch-name">${a.block_name.substring(0,20)}</div>
+      <div class="arch-pcs">${a.pcs_name.substring(0,20)}</div>
+      <div class="arch-score" style="color:${colors[i%colors.length]}">Score: ${scoreVal}</div>
+      <select class="styled-select" style="font-size:11px;margin-top:6px;width:100%" onchange="state.archScheduleChoice[${a.id}]=+this.value;renderCompareOnly()">
+        ${schedules.map((s,si)=>`<option value="${si}" ${si===selectedSched?'selected':''}>${s.name} · $${s.lifecycle_npv.toFixed(1)}M · ${s.aug_count} aug</option>`).join('')}
+      </select>
+    </div>`;
+  });
+  html+='</div>';
+  header.innerHTML=html;
+}
+
+let _compareTabsInit=false;
+function renderCompareTabs(){
+  const tabs=document.getElementById('compareTabs');
+  const tabDefs=['lifecycle','techspecs','block','pcs','supply'];
+  const tabLabels=['Lifecycle Costs','Tech Specs & Performance','AC/DC Block','PCS','Supply & Counterparty'];
+  let html='';
+  tabDefs.forEach((t,i)=>{
+    html+=`<div class="compare-tab ${t===state.compareTab?'active':''}" data-ctab="${t}">${tabLabels[i]}</div>`;
+  });
+  tabs.innerHTML=html;
+  // Only attach listener ONCE
+  if(!_compareTabsInit){
+    _compareTabsInit=true;
+    tabs.addEventListener('click',e=>{
+      const tab=e.target.closest('.compare-tab');
+      if(!tab)return;
+      state.compareTab=tab.dataset.ctab;
+      document.querySelectorAll('#compareTabs .compare-tab').forEach(t=>t.classList.toggle('active',t.dataset.ctab===state.compareTab));
+      renderCompareOnly();
+    });
+  }
+}
+
+// Lightweight re-render that only updates content, not header/tabs
+function renderCompareOnly(){
+  const pinned=Array.from(state.pinned).map(id=>allArchs[id]);
+  if(pinned.length) renderCompareContent(pinned);
+}
+
+let _compareTimeout=null;
+function destroyCompareCharts(){['lcChart','wfChart','ecChart','bdChart','fpChart'].forEach(k=>destroyChart(k))}
+
+function renderCompareContent(pinned){
+  if(_compareTimeout){clearTimeout(_compareTimeout);_compareTimeout=null}
+  destroyCompareCharts();
+  applyChartDefaults();
+  const container=document.getElementById('compareContent');
+  const colors=['#10697d','#d4a520','#c8215b','#07d2ed','#7c3aed'];
+  const ts=pinned.map(a=>genTimeSeriesData(a));
+  const data=pinned.map(a=>getCompareData(a));
+  const yrs=Array.from({length:20},(_,i)=>i+1);
+
+  let html='';
+  const tab=state.compareTab;
+
+  if(tab==='lifecycle'){
+    html+=`<div class="chart-collapse"><div class="chart-collapse-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.chart-collapse-toggle').textContent=this.nextElementSibling.classList.contains('collapsed')?'Show chart ▸':'Hide chart ▾'"><h3>Lifecycle Cost Accumulation</h3><span class="chart-collapse-toggle">Hide chart ▾</span></div><div class="chart-collapse-body"><div style="height:220px"><canvas id="lcChart"></canvas></div></div></div>`;
+    html+=`<div class="chart-collapse"><div class="chart-collapse-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.chart-collapse-toggle').textContent=this.nextElementSibling.classList.contains('collapsed')?'Show chart ▸':'Hide chart ▾'"><h3>Cost Waterfall</h3><span class="chart-collapse-toggle">Hide chart ▾</span></div><div class="chart-collapse-body"><div style="height:220px"><canvas id="wfChart"></canvas></div></div></div>`;
+    html+=`<table class="compare-table"><thead><tr><th>Metric</th>`;
+    pinned.forEach(a=>html+=`<th style="border-bottom-color:${colors[pinned.indexOf(a)%colors.length]}">${a.block_name.substring(0,15)}</th>`);
+    html+=`</tr></thead><tbody>`;
+    const sections=[
+      {header:'Lifecycle Costs',rows:[
+        {label:'CapEx',key:'capex'},
+        {label:'Variable Install Cost',key:'installCost'},
+        {label:'Augmentation CapEx',key:'augCapex'},
+        {label:'OpEx',key:'opex'},
+        {label:'ITC Benefit',key:'itcBenefit'},
+        {label:'Lifecycle Cost',key:'lifecycleCost'},
+      ]},
+      {header:'Capital Expenses',rows:[
+        {label:'Block Price (DDP)',key:'blockPrice'},
+        {label:'PCS Price (DDP)',key:'pcsPrice'},
+        {label:'EMS Price',key:'emsPrice'},
+        {label:'MV Transformer Cost',key:'mvTransformer'},
+        {label:'UL9540 Cost',key:'ul9540Cost'},
+      ]},
+      {header:'Operating Expenses',rows:[
+        {label:'Product Warranty',key:'productWarranty'},
+        {label:'Preventative Maintenance',key:'preventMaint'},
+        {label:'EMS Licensing',key:'emsLicensing'},
+        {label:'Aug CapEx',key:'augCapex'},
+        {label:'Aug Install Cost',key:'augInstallCost'},
+        {label:'Augmentation Strategy',key:'augStrategy'},
+      ]},
+    ];
+    sections.forEach(s=>{
+      html+=`<tr><td class="section-header" colspan="${pinned.length+1}">${s.header}</td></tr>`;
+      s.rows.forEach(r=>{
+        const vals=data.map(d=>d[r.key]||'—');
+        html+=`<tr><td>${r.label}</td>`;
+        vals.forEach(v=>html+=`<td>${v}</td>`);
+        html+=`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  }else if(tab==='techspecs'){
+    html+=`<div class="chart-collapse"><div class="chart-collapse-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.chart-collapse-toggle').textContent=this.nextElementSibling.classList.contains('collapsed')?'Show chart ▸':'Hide chart ▾'"><h3>Energy Capacity Over Time</h3><span class="chart-collapse-toggle">Hide chart ▾</span></div><div class="chart-collapse-body"><div style="height:220px"><canvas id="ecChart"></canvas></div></div></div>`;
+    html+=`<table class="compare-table"><thead><tr><th>Metric</th>`;
+    pinned.forEach(a=>html+=`<th style="border-bottom-color:${colors[pinned.indexOf(a)%colors.length]}">${a.block_name.substring(0,15)}</th>`);
+    html+=`</tr></thead><tbody>`;
+    const sections2=[
+      {header:'Tech Specs and Performance',rows:[
+        {label:'Nameplate Energy',key:'nameplate'},
+        {label:'Delivered AC Energy',key:'deliveredAC'},
+        {label:'RTE',key:'rte'},
+        {label:'Real Power',key:'realPower'},
+        {label:'Reactive Power',key:'reactivePower'},
+        {label:'BOL Install Area',key:'bolArea'},
+        {label:'Lifetime Install Area',key:'lifetimeArea'},
+      ]},
+      {header:'Design',rows:[
+        {label:'Block Count',key:'blockCount'},
+        {label:'PCS Count',key:'pcsCount'},
+        {label:'Blocks per Skid',key:'blocksPerSkid'},
+        {label:'PCS per MV Skid',key:'pcsPerSkid'},
+      ]},
+    ];
+    sections2.forEach(s=>{
+      html+=`<tr><td class="section-header" colspan="${pinned.length+1}">${s.header}</td></tr>`;
+      s.rows.forEach(r=>{
+        const vals=data.map(d=>d[r.key]||'—');
+        html+=`<tr><td>${r.label}</td>`;
+        vals.forEach(v=>html+=`<td>${v}</td>`);
+        html+=`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  }else if(tab==='block'){
+    html+=`<div class="chart-collapse"><div class="chart-collapse-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.chart-collapse-toggle').textContent=this.nextElementSibling.classList.contains('collapsed')?'Show chart ▸':'Hide chart ▾'"><h3>Equipment Deployment Timeline</h3><span class="chart-collapse-toggle">Hide chart ▾</span></div><div class="chart-collapse-body"><div style="height:220px"><canvas id="bdChart"></canvas></div></div></div>`;
+    html+=`<table class="compare-table"><thead><tr><th>Metric</th>`;
+    pinned.forEach(a=>html+=`<th style="border-bottom-color:${colors[pinned.indexOf(a)%colors.length]}">${a.block_name.substring(0,15)}</th>`);
+    html+=`</tr></thead><tbody>`;
+    const sections3=[
+      {header:'Pricing and Value',rows:[
+        {label:'Block Price (FOB)',key:'blockPriceFOB'},
+        {label:'Includes EMS',key:'includesEMS'},
+        {label:'Tariff',key:'blockTariff'},
+        {label:'Shipping',key:'blockShipping'},
+        {label:'Commissioning',key:'blockComm'},
+        {label:'Block Warranty',key:'blockWarranty'},
+        {label:'Warranty Includes PM',key:'warrantyIncludesPM'},
+      ]},
+      {header:'Tech Specs',rows:[
+        {label:'Cell Chemistry',key:'cellChemistry'},
+        {label:'C-Rate',key:'cRate'},
+        {label:'Nameplate Energy',key:'nameplateBlock'},
+        {label:'DC RTE',key:'dcRte'},
+        {label:'Usable DC Energy',key:'usableDCEnergy'},
+        {label:'AC RTE',key:'acRte'},
+        {label:'Usable AC Energy',key:'usableACEnergy'},
+        {label:'Min/Max DC Voltage',key:'minVoltage'},
+      ]},
+      {header:'Certification and Safety',rows:[
+        {label:'UL 9540',key:'ul9540Status'},
+        {label:'UL 9540A Status',key:'ul9540aStatus'},
+        {label:'NFPA 855',key:'nfpa855Compliant'},
+        {label:'Fire Suppression',key:'fireSuppress'},
+        {label:'Deflagration System',key:'deflagration'},
+      ]},
+      {header:'Design',rows:[
+        {label:'Length',key:'blockLength'},
+        {label:'Width',key:'blockWidth'},
+        {label:'Height',key:'blockHeight'},
+        {label:'Weight',key:'blockWeight'},
+        {label:'IP Rating',key:'ipRating'},
+        {label:'Operating Temp Range',key:'operatingTemp'},
+        {label:'Noise Level',key:'noiseLevel'},
+      ]},
+    ];
+    sections3.forEach(s=>{
+      html+=`<tr><td class="section-header" colspan="${pinned.length+1}">${s.header}</td></tr>`;
+      s.rows.forEach(r=>{
+        const vals=data.map(d=>d[r.key]||'—');
+        html+=`<tr><td>${r.label}</td>`;
+        vals.forEach(v=>html+=`<td>${v}</td>`);
+        html+=`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  }else if(tab==='pcs'){
+    html+=`<table class="compare-table"><thead><tr><th>Metric</th>`;
+    pinned.forEach(a=>html+=`<th style="border-bottom-color:${colors[pinned.indexOf(a)%colors.length]}">${a.pcs_name.substring(0,15)}</th>`);
+    html+=`</tr></thead><tbody>`;
+    const sections4=[
+      {header:'Pricing and Value',rows:[
+        {label:'PCS Price (FOB)',key:'pcsPriceFOB'},
+        {label:'Tariff',key:'pcsTariff'},
+        {label:'Shipping',key:'pcsShipping'},
+        {label:'Commissioning',key:'pcsComm'},
+        {label:'PCS Warranty',key:'pcsWarranty'},
+        {label:'Warranty Includes PM',key:'pcsWarrantyIncludesPM'},
+        {label:'PCS PM Cost',key:'pcsPmCost'},
+      ]},
+      {header:'Tech Specs',rows:[
+        {label:'Product Archetype',key:'archetype'},
+        {label:'MV Transformer Included',key:'mvTransformerIncluded'},
+        {label:'PCS per MV Skid',key:'pcsPerMVSkid'},
+        {label:'CEC Efficiency',key:'cecEfficiency'},
+        {label:'MV Skid Efficiency',key:'mvSkidEfficiency'},
+        {label:'Rated Power',key:'ratedPower'},
+        {label:'Nameplate Power',key:'nameplatePower'},
+        {label:'DC Voltage Range',key:'dcVoltageRange'},
+        {label:'AC Voltage',key:'acVoltage'},
+      ]},
+      {header:'Design',rows:[
+        {label:'Length',key:'pcsLength'},
+        {label:'Width',key:'pcsWidth'},
+        {label:'Height',key:'pcsHeight'},
+        {label:'Weight',key:'pcsWeight'},
+        {label:'IP Rating',key:'pcsIPRating'},
+        {label:'Operating Temp Range',key:'pcsOperatingTemp'},
+      ]},
+    ];
+    sections4.forEach(s=>{
+      html+=`<tr><td class="section-header" colspan="${pinned.length+1}">${s.header}</td></tr>`;
+      s.rows.forEach(r=>{
+        const vals=data.map(d=>d[r.key]||'—');
+        html+=`<tr><td>${r.label}</td>`;
+        vals.forEach(v=>html+=`<td>${v}</td>`);
+        html+=`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  }else if(tab==='supply'){
+    html+=`<div class="chart-collapse"><div class="chart-collapse-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.chart-collapse-toggle').textContent=this.nextElementSibling.classList.contains('collapsed')?'Show chart ▸':'Hide chart ▾'"><h3>Footprint Over Time</h3><span class="chart-collapse-toggle">Hide chart ▾</span></div><div class="chart-collapse-body"><div style="height:220px"><canvas id="fpChart"></canvas></div></div></div>`;
+    html+=`<table class="compare-table"><thead><tr><th>Metric</th>`;
+    pinned.forEach(a=>html+=`<th style="border-bottom-color:${colors[pinned.indexOf(a)%colors.length]}">${a.block_name.substring(0,15)}</th>`);
+    html+=`</tr></thead><tbody>`;
+    const sections5=[
+      {header:'Counterparty',rows:[
+        {label:'System Archetype',key:'systemArchetype'},
+        {label:'Cell Manufacturer',key:'cellMfg'},
+        {label:'FEOC Risk Rating',key:'feocRating'},
+        {label:'Ownership',key:'ownership'},
+        {label:'Tier-1',key:'tier1'},
+        {label:'Tax Equity Financed',key:'taxEquityFinanced'},
+      ]},
+      {header:'Supply Chain',rows:[
+        {label:'Domestic Content',key:'domesticContent'},
+        {label:'Domestic Content %',key:'domesticContentPct'},
+        {label:'Cell Factory Location',key:'cellFactory'},
+        {label:'Pack Factory Location',key:'packFactory'},
+        {label:'Container Location',key:'containerLocation'},
+        {label:'Global Mfg Capacity',key:'globalMfgCapacity'},
+        {label:'Domestic Mfg Capacity',key:'domesticMfgCapacity'},
+        {label:'Factory Audit',key:'factoryAudit'},
+      ]},
+      {header:'Long Term Service',rows:[
+        {label:'Availability Guarantee',key:'availabilityGuarantee'},
+        {label:'Availability Scope',key:'availabilityScope'},
+        {label:'RTE Guarantee',key:'rteGuarantee'},
+        {label:'Performance Guarantee',key:'performanceGuarantee'},
+      ]},
+    ];
+    sections5.forEach(s=>{
+      html+=`<tr><td class="section-header" colspan="${pinned.length+1}">${s.header}</td></tr>`;
+      s.rows.forEach(r=>{
+        const vals=data.map(d=>d[r.key]||'—');
+        html+=`<tr><td>${r.label}</td>`;
+        vals.forEach(v=>html+=`<td>${v}</td>`);
+        html+=`</tr>`;
+      });
+    });
+    html+=`</tbody></table>`;
+  }
+
+  container.innerHTML=html;
+
+  _compareTimeout=setTimeout(()=>{
+    if(tab==='lifecycle'){
+      destroyChart('lcChart');
+      charts['lcChart']=new Chart(document.getElementById('lcChart').getContext('2d'),{type:'line',data:{labels:yrs,datasets:pinned.map((a,i)=>({label:a.block_name,data:ts[i].lifecycle_cost_cumulative_USD.map(v=>v/1e6),borderColor:colors[i],borderWidth:2,fill:false,tension:0.4,pointRadius:3}))},options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:true}},scales:{y:{title:{display:true,text:'Cumulative Cost ($M)'},ticks:{callback:v=>'$'+v.toFixed(0)+'M'}}}}});
+      destroyChart('wfChart');
+      charts['wfChart']=new Chart(document.getElementById('wfChart').getContext('2d'),{type:'bar',data:{labels:pinned.map(a=>a.block_name.substring(0,15)),datasets:[{label:'BOL CAPEX',data:pinned.map(a=>a.bol_capex_M),backgroundColor:'#10697d'},{label:'Aug CAPEX',data:pinned.map(a=>a.aug_capex_npv_M),backgroundColor:'#d4a520'},{label:'Warranty',data:pinned.map(a=>a.lifecycle_npv*0.12),backgroundColor:'#c8215b'},{label:'Maintenance',data:pinned.map(a=>a.lifecycle_npv*0.08),backgroundColor:'#07d2ed'},{label:'EPC',data:pinned.map(a=>a.lifecycle_npv*0.05),backgroundColor:'#7c3aed'},{label:'EMS',data:pinned.map(a=>a.lifecycle_npv*0.03),backgroundColor:'#636466'},{label:'ITC Benefit',data:pinned.map(a=>-a.itc_benefit_M),backgroundColor:'#10b981'}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:true}},scales:{x:{stacked:true,ticks:{callback:v=>'$'+v.toFixed(0)+'M'}}}}});
+    }else if(tab==='techspecs'){
+      destroyChart('ecChart');
+      const eDS=[];
+      pinned.forEach((a,i)=>{eDS.push({label:a.block_name.substring(0,12)+' (dep)',data:ts[i].energy_deployed_MWh.map(v=>v/1000),borderColor:colors[i],borderWidth:2,fill:false,tension:0.4,pointRadius:2});eDS.push({label:a.block_name.substring(0,12)+' (avail)',data:ts[i].energy_available_MWh.map(v=>v/1000),borderColor:colors[i],borderWidth:2,borderDash:[5,5],fill:false,tension:0.4,pointRadius:0})});
+      charts['ecChart']=new Chart(document.getElementById('ecChart').getContext('2d'),{type:'line',data:{labels:yrs,datasets:eDS},options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:true,position:'bottom'}},scales:{y:{title:{display:true,text:'Energy (MWh)'}}}}});
+    }else if(tab==='block'){
+      destroyChart('bdChart');
+      charts['bdChart']=new Chart(document.getElementById('bdChart').getContext('2d'),{type:'line',data:{labels:yrs,datasets:pinned.map((a,i)=>({label:a.block_name.substring(0,12),data:ts[i].block_count_cumulative,borderColor:colors[i],backgroundColor:colors[i]+'30',fill:true,tension:0.4,borderWidth:2,pointRadius:2}))},options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:true}},scales:{y:{title:{display:true,text:'Blocks'}}}}});
+    }else if(tab==='supply'){
+      destroyChart('fpChart');
+      charts['fpChart']=new Chart(document.getElementById('fpChart').getContext('2d'),{type:'line',data:{labels:yrs,datasets:pinned.map((a,i)=>({label:a.block_name.substring(0,12),data:ts[i].footprint_acres,borderColor:colors[i],backgroundColor:colors[i]+'30',fill:true,tension:0.4,borderWidth:2,pointRadius:2}))},options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:true}},scales:{y:{title:{display:true,text:'Acres'}}}}});
+    }
+  },80);
+}
+
+// ========== COMPARE MODE: INTER vs INTRA ==========
+state.compareMode='architectures'; // 'architectures' or 'schedules'
+state.schedArchId=null; // which architecture to show schedules for
+
+// Generate mock schedules for an architecture
+function genSchedules(arch){
+  const rng=sr(arch.id*53);
+  const count=Math.max(1,Math.min(5,arch.aug_count+1+Math.floor(rng()*2)));
+  const schedules=[];
+  const strategies=['Overbuild Only','1 Augmentation','2 Augmentations','3 Augmentations','Optimal'];
+  for(let s=0;s<count;s++){
+    const augCount=s;
+    const costMultiplier=1+(s===0?0.08:0)-(s>0?s*0.02:0)+rng()*0.04;
+    schedules.push({
+      id:s,name:strategies[s]||`Schedule ${s+1}`,
+      aug_count:augCount,
+      lifecycle_npv:+(arch.lifecycle_npv*costMultiplier).toFixed(2),
+      effective_price:+(arch.effective_price*costMultiplier).toFixed(2),
+      footprint:+(arch.footprint*(1+augCount*0.08)).toFixed(1),
+      bol_block_count:arch.bol_block_count,
+      bol_pcs_count:arch.bol_pcs_count,
+      bol_capex_M:arch.bol_capex_M,
+      aug_capex_npv_M:+(augCount>0?arch.aug_capex_npv_M*augCount/(arch.aug_count||1):0).toFixed(2),
+      opex_npv_M:+(arch.opex_npv_M*(1+augCount*0.03)).toFixed(2),
+      itc_benefit_M:arch.itc_benefit_M,
+      block_name:arch.block_name,pcs_name:arch.pcs_name,cluster:arch.cluster,
+    });
+  }
+  return schedules;
+}
+
+window.toggleSchedule=function(idx){
+  if(!state.activeSchedules){
+    // First toggle: activate all then deactivate this one
+    const archId=state.schedArchId;
+    const count=genSchedules(allArchs[archId]).length;
+    state.activeSchedules=new Set(Array.from({length:count},(_,i)=>i));
+  }
+  if(state.activeSchedules.has(idx)) state.activeSchedules.delete(idx);
+  else state.activeSchedules.add(idx);
+  renderExplore();
+};
+
+window.setCompareMode=function(mode){
+  state.compareMode=mode;
+  document.querySelectorAll('#compareModeToggle .seg-opt').forEach(o=>o.classList.toggle('active',o.dataset.cmode===mode));
+  document.getElementById('archPickerWrap').style.display=mode==='schedules'?'inline-flex':'none';
+  document.getElementById('compareModeHint').textContent=mode==='architectures'?'Comparing pinned architectures (best schedule each)':'Comparing augmentation schedules within one architecture';
+
+  if(mode==='schedules'){
+    const picker=document.getElementById('schedArchPicker');
+    const pinned=Array.from(state.pinned).map(id=>allArchs[id]);
+    if(pinned.length){
+      picker.innerHTML=pinned.map(a=>`<option value="${a.id}">${a.block_name} + ${a.pcs_name}</option>`).join('');
+      state.schedArchId=pinned[0].id;
+    }
+  }
+  _compareTabsInit=false; // force tabs to re-init
+  renderExplore();
+};
+
+function renderExplore(){
+  applyChartDefaults();
+  destroyCompareCharts();
+
+  if(state.compareMode==='schedules'){
+    // Within-architecture: compare schedules
+    const archId=state.schedArchId!==null?state.schedArchId:(state.pinned.size>0?[...state.pinned][0]:null);
+    if(archId===null){
+      document.getElementById('compareHeader').innerHTML='<div class="empty-state"><div class="empty-state-icon">📌</div><div class="empty-state-title">No Architecture Selected</div><div class="empty-state-text">Pin architectures from Overview, then select one to compare its schedules.</div></div>';
+      document.getElementById('compareTabs').innerHTML='';document.getElementById('compareContent').innerHTML='';return;
+    }
+    const arch=allArchs[archId];
+    const schedules=genSchedules(arch);
+    const colors=['#10697d','#d4a520','#c8215b','#07d2ed','#7c3aed'];
+
+    // Header: architecture info + schedule cards (like cross-arch cards)
+    let headerHtml=`<div style="margin-bottom:16px">
+      <div style="background:var(--bg-subtle);border-radius:10px;padding:14px 18px;margin-bottom:12px;border:1px solid var(--border-light)">
+        <div style="font-size:16px;font-weight:700">${arch.block_name} <span style="font-weight:400;color:var(--text-secondary)">+ ${arch.pcs_name}</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">$${arch.lifecycle_npv.toFixed(1)}M NPV · ${arch.footprint} ac · ${arch.bol_block_count} blocks · ${arch.bol_pcs_count} PCS</div>
+      </div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">Schedules — click cards to toggle on/off</div>
+      <div class="compare-header">`;
+    schedules.forEach((s,i)=>{
+      const active=!state.activeSchedules||state.activeSchedules.has(i);
+      const augYears=s.aug_count>0?Array.from({length:s.aug_count},(_,j)=>Math.floor(3+j*(17/s.aug_count))).join(', '):'None';
+      headerHtml+=`<div class="compare-arch-card" style="border-color:${active?colors[i%5]:'var(--border-light)'};opacity:${active?1:0.4};cursor:pointer" onclick="toggleSchedule(${i})">
+        <div style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:${colors[i%5]}"></span><span class="arch-name" style="font-size:13px">${s.name}</span></div>
+        <div class="arch-pcs">Aug years: ${augYears}</div>
+        <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--text-muted)">
+          <span>NPV: <strong style="color:var(--text-primary)">$${s.lifecycle_npv.toFixed(1)}M</strong></span>
+          <span>Augs: <strong style="color:var(--text-primary)">${s.aug_count}</strong></span>
+          <span>Footprint: <strong style="color:var(--text-primary)">${s.footprint} ac</strong></span>
+        </div>
+      </div>`;
+    });
+    headerHtml+=`</div></div>`;
+    document.getElementById('compareHeader').innerHTML=headerHtml;
+
+    renderCompareTabs();
+    // Use schedule names as labels so charts/tables show schedule identity, not arch name
+    const pseudoArchs=schedules.filter((_,i)=>!state.activeSchedules||state.activeSchedules.has(i)).map((s,i)=>({...s,id:arch.id*100+i,block_name:s.name,pcs_name:arch.block_name+' + '+arch.pcs_name}));
+    renderCompareContent(pseudoArchs);
+    return;
+  }
+
+  // Cross-architecture mode (original behavior)
+  const pinned=Array.from(state.pinned).map(id=>allArchs[id]);
+  if(!pinned.length){
+    document.getElementById('compareHeader').innerHTML='<div class="empty-state"><div class="empty-state-icon">📌</div><div class="empty-state-title">No Architectures Pinned</div><div class="empty-state-text">Pin architectures from the Overview table to compare them side-by-side.</div></div>';
+    document.getElementById('compareTabs').innerHTML='';document.getElementById('compareContent').innerHTML='';return;
+  }
+
+  renderCompareHeader(pinned);
+  renderCompareTabs();
+  renderCompareContent(pinned);
+}
+
+document.getElementById('themeToggle').addEventListener('click',()=>{
+  const html=document.documentElement;
+  const isDark=html.getAttribute('data-theme')==='dark';
+  html.setAttribute('data-theme',isDark?'light':'dark');
+  document.getElementById('themeIcon').textContent=isDark?'☀️':'🌙';
+  applyChartDefaults();
+  if(state.view==='overview')renderOverview();
+  else if(state.view==='explore')renderExplore();
+});
+
+try{initScatterSelectors()}catch(e){console.error('Scatter init error:',e)}
+try{renderOverview()}catch(e){console.error('Overview render error:',e)}
+
+</script>
+</body>
+</html>
