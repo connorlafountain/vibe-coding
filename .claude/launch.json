@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "capacity-maintenance",
+      "runtimeExecutable": "/Users/connorlafountain/.pyenv/versions/3.13.5/bin/python3",
+      "runtimeArgs": ["-m", "http.server", "8002", "--directory", "/Users/connorlafountain/Documents/GitHub/vibe-coding/.claude/worktrees/objective-goldstine/pocs/003-capacity-maintenance"],
+      "port": 8002
+    },
+    {
       "name": "vendor-portal",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "uvicorn", "app:app", "--reload", "--host", "0.0.0.0", "--port", "8000"],

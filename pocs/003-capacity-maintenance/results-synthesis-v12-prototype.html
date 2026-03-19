@@ -212,7 +212,7 @@ body{background:var(--bg-page);color:var(--text-primary);padding:24px 20px}
 .compare-chart-wrap{position:relative;height:240px}
 
 .compare-table{width:100%;border-collapse:collapse;font-size:13px}
-.compare-table th{text-align:left;padding:10px 14px;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;border-bottom:2px solid var(--border-light);background:var(--bg-subtle)}
+.compare-table th{text-align:left;padding:10px 14px;font-weight:600;color:var(--text-muted);font-size:11px;text-transform:uppercase;border-bottom:2px solid var(--border-light);background:var(--bg-subtle);position:sticky;top:46px;z-index:40}
 .compare-table td{padding:10px 14px;border-bottom:1px solid var(--border-light);text-align:center}
 .compare-table td:first-child{text-align:left;font-weight:500;color:var(--text-secondary);min-width:200px}
 .compare-table .section-header{background:var(--primary-light);font-weight:700;color:var(--text-primary);text-align:left;font-size:13px;padding:10px 14px;border-bottom:2px solid var(--primary)}
@@ -231,22 +231,33 @@ body{background:var(--bg-page);color:var(--text-primary);padding:24px 20px}
 
 @media(max-width:900px){.dash-grid,.dist-grid{grid-template-columns:1fr}.prio-sliders{flex-direction:column;gap:12px}.compare-header{flex-direction:column}}
 
-/* ONBOARDING STEPPER */
-.onboarding-strip{max-width:1320px;margin:0 auto 16px;background:linear-gradient(135deg,var(--primary-light),var(--bg-card));border:1px solid var(--primary);border-radius:10px;padding:12px 20px;transition:all .3s}
-.onboarding-strip.dismissed{display:none}
-.onboarding-content{display:flex;align-items:center;justify-content:space-between}
-.onboarding-steps{display:flex;align-items:center;gap:6px}
-.ob-step{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;transition:all .2s;position:relative}
-.ob-step.active{background:var(--primary);border-radius:8px}
-.ob-step.active .ob-num,.ob-step.active .ob-text{color:#fff}
-.ob-step.completed .ob-num{background:var(--primary);color:#fff}
-.ob-num{width:22px;height:22px;border-radius:50%;border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--primary);flex-shrink:0}
-.ob-text{font-size:13px;font-weight:600;color:var(--text-primary)}
-.ob-hint{display:none;font-size:11px;color:var(--text-muted);font-weight:400}
-.ob-step.active .ob-hint{display:inline;color:rgba(255,255,255,.8)}
-.ob-arrow{color:var(--text-muted);font-size:14px}
-.ob-dismiss{padding:6px 14px;border-radius:8px;border:1px solid var(--primary);background:transparent;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer}
-.ob-dismiss:hover{background:var(--primary);color:#fff}
+/* GUIDED TOUR */
+.tour-backdrop-click{position:fixed;inset:0;z-index:9999;display:none}
+.tour-spotlight{position:fixed;z-index:10000;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none;transition:top .35s ease,left .35s ease,width .35s ease,height .35s ease;display:none}
+.tour-highlight{position:relative;z-index:10001!important;border-radius:8px}
+.tour-tooltip{position:fixed;z-index:10002;max-width:360px;width:max-content;background:var(--bg-card);border:1.5px solid var(--primary);border-radius:14px;padding:22px 24px 18px;box-shadow:0 12px 40px rgba(0,0,0,.2);display:none;animation:tourFadeIn .28s ease}
+@keyframes tourFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.tour-tooltip-arrow{position:absolute;width:12px;height:12px;background:var(--bg-card);border:1.5px solid var(--primary);transform:rotate(45deg);z-index:-1}
+.tour-tooltip[data-pos="bottom"] .tour-tooltip-arrow{top:-7px;left:28px;border-right:none;border-bottom:none}
+.tour-tooltip[data-pos="top"] .tour-tooltip-arrow{bottom:-7px;left:28px;border-left:none;border-top:none}
+.tour-tooltip[data-pos="left"] .tour-tooltip-arrow{right:-7px;top:24px;border-left:none;border-top:none}
+.tour-tooltip[data-pos="right"] .tour-tooltip-arrow{left:-7px;top:24px;border-right:none;border-bottom:none}
+.tour-tooltip-step{font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.tour-tooltip-title{font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px}
+.tour-tooltip-body{font-size:13px;line-height:1.65;color:var(--text-secondary);margin-bottom:16px}
+.tour-tooltip-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tour-dots{display:flex;gap:5px}
+.tour-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .2s}
+.tour-dot.active{background:var(--primary);width:18px;border-radius:4px}
+.tour-nav{display:flex;align-items:center;gap:8px}
+.tour-btn-back{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.tour-btn-back:hover{border-color:var(--primary);color:var(--primary)}
+.tour-btn-next{padding:7px 18px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.tour-btn-next:hover{filter:brightness(1.08)}
+.tour-skip{background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:4px 0;text-decoration:underline}
+.tour-skip:hover{color:var(--text-secondary)}
+.tour-restart{position:fixed;top:16px;right:60px;z-index:9998;width:36px;height:36px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);transition:all .2s}
+.tour-restart:hover{border-color:var(--primary);color:var(--primary);transform:scale(1.08)}
 
 /* FEEDBACK WIDGET */
 .feedback-trigger{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:24px;padding:10px 18px 10px 14px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.1);transition:all .25s;color:var(--text-secondary);font-size:14px;font-weight:500}
@@ -296,36 +307,8 @@ body{background:var(--bg-page);color:var(--text-primary);padding:24px 20px}
 <!-- ===== OVERVIEW VIEW ===== -->
 <div class="section visible" id="overviewView">
   <div class="kpi-strip" id="kpiStrip"></div>
-  <div class="onboarding-strip" id="onboarding">
-    <div class="onboarding-content">
-      <div class="onboarding-steps">
-        <div class="ob-step active" data-step="1">
-          <span class="ob-num">1</span>
-          <span class="ob-text">Filter</span>
-          <span class="ob-hint">Click bars or drag on charts to narrow architectures</span>
-        </div>
-        <div class="ob-arrow">→</div>
-        <div class="ob-step" data-step="2">
-          <span class="ob-num">2</span>
-          <span class="ob-text">Prioritize</span>
-          <span class="ob-hint">Set importance sliders to rank by what matters to you</span>
-        </div>
-        <div class="ob-arrow">→</div>
-        <div class="ob-step" data-step="3">
-          <span class="ob-num">3</span>
-          <span class="ob-text">Select</span>
-          <span class="ob-hint">Click + on architectures to add them for comparison</span>
-        </div>
-        <div class="ob-arrow">→</div>
-        <div class="ob-step" data-step="4">
-          <span class="ob-num">4</span>
-          <span class="ob-text">Compare</span>
-          <span class="ob-hint">Switch to Compare tab for detailed side-by-side analysis</span>
-        </div>
-      </div>
-      <button class="ob-dismiss" onclick="dismissOnboarding()">Got it</button>
-    </div>
-  </div>
+  <!-- Guided tour restart button -->
+  <div class="tour-restart" id="tourRestart" title="Take a tour" onclick="GuidedTour.start()">?</div>
   <div class="filter-bar" id="filterBar"></div>
   <div id="selectedArchsCard"></div>
 
@@ -508,6 +491,28 @@ const SUPPLY_DATA = {
   'EVE LF560K': {location:'Huizhou, China', feoc:'Low', integration:'Cell and Pack', capacity:'30 GWh', projects:'11-25', avgSize:'101-500 MWh'},
   'Samsung E3': {location:'Cheonan, South Korea', feoc:'Medium', integration:'Cell and Module', capacity:'20 GWh', projects:'11-25', avgSize:'101-500 MWh'},
   'Sungrow PowerTitan': {location:'Hefei, China', feoc:'Low', integration:'Pack and Container', capacity:'35 GWh', projects:'25-50', avgSize:'501-1000 MWh'},
+};
+
+// Fire Safety and Explosion Risk data per block — scores 0-1 per category, total = sum
+const FIRE_SAFETY_CATEGORIES = [
+  {key:'ul9540',          label:'UL9540 Certification',                               color:'#FF9800'},
+  {key:'ul9540a',         label:'Complete 9540A Testing (Cell, Pack/Module, Rack, Unit)', color:'#4CAF50'},
+  {key:'fullBurnTest',    label:'Full Scale Burn Test Performed',                      color:'#FDD835'},
+  {key:'facp',            label:'Internal Fire Access Control Panel (FACP)',            color:'#E91E63'},
+  {key:'exhaustVent',     label:'Exhaust Ventilation (NFPA 69)',                       color:'#90CAF9'},
+  {key:'deflagPanels',    label:'Deflagration Panels (NFPA 68)',                       color:'#80DEEA'},
+  {key:'heatSensor',      label:'Heat Sensor',                                        color:'#FF5722'},
+  {key:'smokeSensor',     label:'Smoke Sensor',                                       color:'#66BB6A'},
+  {key:'gasSensor',       label:'Gas Sensor',                                         color:'#FFCA28'},
+  {key:'cleanAgent',      label:'Clean Agent/Aerosol',                                color:'#EF5350'},
+  {key:'dryPipe',         label:'Dry Pipe',                                           color:'#1E88E5'},
+];
+const FIRE_SAFETY_DATA = {
+  'CATL 314Ah EnerOne':  {ul9540:1, ul9540a:1, fullBurnTest:0, facp:0.7, exhaustVent:0.8, deflagPanels:0.6, heatSensor:0.8, smokeSensor:1, gasSensor:0, cleanAgent:0.8, dryPipe:0.5, total:8.0},
+  'BYD Cube T28':        {ul9540:1, ul9540a:1, fullBurnTest:0, facp:0, exhaustVent:0.3, deflagPanels:0, heatSensor:0.8, smokeSensor:1, gasSensor:0, cleanAgent:0.8, dryPipe:1, total:7.0},
+  'EVE LF560K':          {ul9540:1, ul9540a:1, fullBurnTest:0, facp:0.7, exhaustVent:0, deflagPanels:0, heatSensor:0.8, smokeSensor:1, gasSensor:0, cleanAgent:0.5, dryPipe:0.5, total:9.0},
+  'Samsung E3':          {ul9540:1, ul9540a:0.8, fullBurnTest:0, facp:0.7, exhaustVent:0.8, deflagPanels:0.6, heatSensor:0.8, smokeSensor:1, gasSensor:0, cleanAgent:0.5, dryPipe:0.6, total:9.0},
+  'Sungrow PowerTitan':  {ul9540:1, ul9540a:1, fullBurnTest:0.8, facp:0.5, exhaustVent:0.6, deflagPanels:0, heatSensor:0.8, smokeSensor:1, gasSensor:0, cleanAgent:0.5, dryPipe:0.4, total:8.8},
 };
 
 const OV_TAB_COLS = {
@@ -1162,26 +1167,213 @@ function renderOverview() {
   renderTable();
   renderScatterExplorer();
   updateCompareTabState();
-  updateOnboardingStep();
 }
 
-// Onboarding step tracking
-function updateOnboardingStep(){
-  const el=document.getElementById('onboarding');
-  if(!el||el.classList.contains('dismissed'))return;
-  const hasFilters=Object.values(state.filters).some(v=>v!==null)||Object.values(state.catFilters).some(v=>v&&v.size>0);
-  const hasCustomWeights=state.weights.cost!==8||state.weights.aug!==5||state.weights.foot!==3||state.weights.price!==4;
-  const hasPinned=state.pinned.size>0;
-  const steps=el.querySelectorAll('.ob-step');
-  steps.forEach(s=>s.classList.remove('active','completed'));
-  if(hasPinned){steps[0].classList.add('completed');steps[1].classList.add('completed');steps[2].classList.add('completed');steps[3].classList.add('active')}
-  else if(hasCustomWeights||hasPinned){steps[0].classList.add('completed');steps[1].classList.add('completed');steps[2].classList.add('active')}
-  else if(hasFilters){steps[0].classList.add('completed');steps[1].classList.add('active')}
-  else{steps[0].classList.add('active')}
-}
+// ========== GUIDED PRODUCT TOUR ==========
+const GuidedTour = {
+  steps: [
+    { selector:'#graphGrid', title:'Filter with Charts', body:'Drag across or click any bar in these charts to instantly filter architectures by that range. Active filters appear in the sticky bar above. Try switching chart categories with the tabs.', pos:'bottom' },
+    { selector:'.prio-sliders', title:'Set Your Priorities', body:'Drag these sliders to weight what matters most — cost, augmentation needs, footprint, or price. The Score column recalculates instantly, re-ranking every architecture.', pos:'top' },
+    { selector:'#clusterChips', title:'Priority Presets', body:'These presets auto-adjust the sliders above to pre-configured weightings. For example, "Cost-Optimized" cranks cost weight to 10 and lowers everything else. Each slider is a relative weight — what matters is how they compare to each other, not the absolute number.', pos:'top' },
+    { selector:'#tHead', title:'Sort & Explore the Table', body:'Click any column header to sort. The Score column reflects your priority weights. Look for the gold medal badge on top-ranked rows.', pos:'bottom' },
+    { selector:'.compare-btn', title:'Pin for Comparison', body:'Click the + button on any row to pin that architecture. You can select up to 5 for detailed side-by-side analysis.', pos:'left' },
+    { selector:'[data-view="explore"]', title:'Switch to Compare', body:'Once you\'ve pinned architectures, click the Compare tab to see lifecycle costs, tech specs, fire safety breakdowns, and more.', pos:'bottom' },
+    { selector:'#compareHeader', title:'Architecture Cards', body:'Each pinned architecture gets a card showing its score. Use the dropdown on each card to switch between maintenance schedules and see how costs change.', pos:'bottom', view:'explore', setup:function(){ if(state.pinned.size===0){const ids=Object.keys(allArchs).slice(0,3).map(Number);ids.forEach(id=>state.pinned.add(id));} if(state.view!=='explore'){document.querySelector('[data-view="explore"]').click();} } },
+    { selector:'#compareTabs', title:'Explore Compare Tabs', body:'Switch between Lifecycle Costs, Tech Specs, AC/DC Block, PCS, and Supply & Counterparty to dig into every dimension of your selected architectures.', pos:'bottom', view:'explore' },
+    { selector:'.compare-table', title:'Side-by-Side Data', body:'Values are compared across your pinned architectures. The best value in each row is highlighted so you can quickly spot winners.', pos:'top', view:'explore' },
+    { selector:'.feedback-trigger', title:'Share Your Feedback', body:'Tell us what\'s working and what\'s not — your input shapes what we ship next.', pos:'left', setup:function(){ if(state.view!=='overview'){document.querySelector('[data-view="overview"]').click();setTimeout(()=>renderOverview(),100);} } }
+  ],
+  current: 0,
+  active: false,
+  els: {},
 
-window.dismissOnboarding=function(){
-  document.getElementById('onboarding').classList.add('dismissed');
+  init() {
+    if(this.els.backdrop) return;
+    // Backdrop click-catcher
+    const bd = document.createElement('div');
+    bd.className='tour-backdrop-click';
+    bd.onclick = () => this.end();
+    document.body.appendChild(bd);
+    this.els.backdrop = bd;
+    // Spotlight
+    const sp = document.createElement('div');
+    sp.className='tour-spotlight';
+    document.body.appendChild(sp);
+    this.els.spotlight = sp;
+    // Tooltip
+    const tt = document.createElement('div');
+    tt.className='tour-tooltip';
+    tt.innerHTML=`
+      <div class="tour-tooltip-arrow"></div>
+      <div class="tour-tooltip-step"></div>
+      <div class="tour-tooltip-title"></div>
+      <div class="tour-tooltip-body"></div>
+      <div class="tour-tooltip-footer">
+        <div class="tour-dots"></div>
+        <div class="tour-nav">
+          <button class="tour-skip" onclick="GuidedTour.end()">Skip</button>
+          <button class="tour-btn-back" onclick="GuidedTour.back()">Back</button>
+          <button class="tour-btn-next" onclick="GuidedTour.next()">Next</button>
+        </div>
+      </div>`;
+    document.body.appendChild(tt);
+    this.els.tooltip = tt;
+    // Keyboard
+    document.addEventListener('keydown', e => {
+      if(!this.active) return;
+      if(e.key==='Escape') this.end();
+      if(e.key==='ArrowRight') this.next();
+      if(e.key==='ArrowLeft') this.back();
+    });
+    // Resize reposition
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      if(!this.active) return;
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => this.goTo(this.current), 120);
+    });
+  },
+
+  start() {
+    this.init();
+    this.active = true;
+    this.current = 0;
+    this.els.backdrop.style.display = 'block';
+    this.els.spotlight.style.display = 'block';
+    this.els.tooltip.style.display = 'block';
+    this.goTo(0);
+  },
+
+  goTo(idx) {
+    if(idx < 0 || idx >= this.steps.length) return;
+    this.current = idx;
+    const step = this.steps[idx];
+    // Remove previous highlight
+    const prev = document.querySelector('.tour-highlight');
+    if(prev) prev.classList.remove('tour-highlight');
+    // Run setup if defined (e.g. switch views, pin architectures)
+    if(step.setup) step.setup();
+    // Allow DOM to settle after setup, then find and highlight target
+    setTimeout(() => {
+      const target = document.querySelector(step.selector);
+      if(!target) { if(idx < this.steps.length-1) this.goTo(idx+1); else this.end(); return; }
+      target.scrollIntoView({ behavior:'smooth', block:'center' });
+      setTimeout(() => {
+        target.classList.add('tour-highlight');
+        this._positionSpotlight(target);
+        this._positionTooltip(target, step);
+        this._updateContent(step, idx);
+      }, 380);
+    }, 150);
+  },
+
+  next() {
+    if(this.current < this.steps.length - 1) this.goTo(this.current + 1);
+    else this.end();
+  },
+
+  back() {
+    if(this.current > 0) this.goTo(this.current - 1);
+  },
+
+  end() {
+    this.active = false;
+    const prev = document.querySelector('.tour-highlight');
+    if(prev) prev.classList.remove('tour-highlight');
+    this.els.backdrop.style.display = 'none';
+    this.els.spotlight.style.display = 'none';
+    this.els.tooltip.style.display = 'none';
+    sessionStorage.setItem('tourDismissed','true');
+  },
+
+  _positionSpotlight(el) {
+    const r = el.getBoundingClientRect();
+    const pad = 8;
+    const sp = this.els.spotlight;
+    sp.style.top = (r.top - pad) + 'px';
+    sp.style.left = (r.left - pad) + 'px';
+    sp.style.width = (r.width + pad*2) + 'px';
+    sp.style.height = (r.height + pad*2) + 'px';
+  },
+
+  _positionTooltip(el, step) {
+    const r = el.getBoundingClientRect();
+    const tt = this.els.tooltip;
+    const gap = 16;
+    // Reset for measurement
+    tt.style.left = '0'; tt.style.top = '0';
+    tt.style.display = 'block';
+    const tw = tt.offsetWidth;
+    const th = tt.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let pos = step.pos || 'bottom';
+    let top, left;
+    // Calculate position
+    if(pos === 'bottom') {
+      top = r.bottom + gap;
+      left = r.left + r.width/2 - tw/2;
+      if(top + th > vh - 20) pos = 'top';
+    }
+    if(pos === 'top') {
+      top = r.top - th - gap;
+      left = r.left + r.width/2 - tw/2;
+      if(top < 20) pos = 'bottom';
+    }
+    if(pos === 'bottom') {
+      top = r.bottom + gap;
+      left = r.left + r.width/2 - tw/2;
+    } else if(pos === 'top') {
+      top = r.top - th - gap;
+      left = r.left + r.width/2 - tw/2;
+    } else if(pos === 'left') {
+      top = r.top + r.height/2 - th/2;
+      left = r.left - tw - gap;
+      if(left < 20) { pos = 'right'; left = r.right + gap; }
+    } else if(pos === 'right') {
+      top = r.top + r.height/2 - th/2;
+      left = r.right + gap;
+      if(left + tw > vw - 20) { pos = 'left'; left = r.left - tw - gap; }
+    }
+    // Clamp to viewport
+    left = Math.max(16, Math.min(left, vw - tw - 16));
+    top = Math.max(16, Math.min(top, vh - th - 16));
+    tt.style.top = top + 'px';
+    tt.style.left = left + 'px';
+    tt.setAttribute('data-pos', pos);
+    // Position arrow
+    const arrow = tt.querySelector('.tour-tooltip-arrow');
+    if(pos === 'bottom' || pos === 'top') {
+      const arrowLeft = Math.max(20, Math.min(r.left + r.width/2 - left - 6, tw - 30));
+      arrow.style.left = arrowLeft + 'px';
+      arrow.style.right = 'auto';
+      arrow.style.top = pos === 'bottom' ? '-7px' : 'auto';
+      arrow.style.bottom = pos === 'top' ? '-7px' : 'auto';
+    } else {
+      arrow.style.top = '24px';
+      arrow.style.bottom = 'auto';
+      arrow.style.left = pos === 'right' ? '-7px' : 'auto';
+      arrow.style.right = pos === 'left' ? '-7px' : 'auto';
+    }
+  },
+
+  _updateContent(step, idx) {
+    const tt = this.els.tooltip;
+    tt.querySelector('.tour-tooltip-step').textContent = `Step ${idx+1} of ${this.steps.length}`;
+    tt.querySelector('.tour-tooltip-title').textContent = step.title;
+    tt.querySelector('.tour-tooltip-body').textContent = step.body;
+    // Dots
+    const dots = tt.querySelector('.tour-dots');
+    dots.innerHTML = this.steps.map((_,i) => `<div class="tour-dot${i===idx?' active':''}"></div>`).join('');
+    // Back button visibility
+    tt.querySelector('.tour-btn-back').style.display = idx === 0 ? 'none' : '';
+    // Next button text
+    tt.querySelector('.tour-btn-next').textContent = idx === this.steps.length - 1 ? 'Done' : 'Next';
+    // Re-trigger animation
+    tt.style.animation = 'none';
+    tt.offsetHeight; // reflow
+    tt.style.animation = '';
+  }
 };
 
 // ========== FEEDBACK WIDGET ==========
@@ -1710,7 +1902,7 @@ function renderCompareContent(pinned){
     });
     html+=`</tbody></table>`;
   }else if(tab==='block'){
-    html+=`<div class="chart-collapse"><div class="chart-collapse-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.chart-collapse-toggle').textContent=this.nextElementSibling.classList.contains('collapsed')?'Show chart ▸':'Hide chart ▾'"><h3>Equipment Deployment Timeline</h3><span class="chart-collapse-toggle">Hide chart ▾</span></div><div class="chart-collapse-body"><div style="height:220px"><canvas id="bdChart"></canvas></div></div></div>`;
+    html+=`<div class="chart-collapse"><div class="chart-collapse-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.querySelector('.chart-collapse-toggle').textContent=this.nextElementSibling.classList.contains('collapsed')?'Show chart ▸':'Hide chart ▾'"><h3>Fire Safety and Explosion Risk</h3><span class="chart-collapse-toggle">Hide chart ▾</span></div><div class="chart-collapse-body"><div style="height:280px"><canvas id="bdChart"></canvas></div></div></div>`;
     html+=`<table class="compare-table"><thead><tr><th>Metric</th>`;
     pinned.forEach(a=>html+=`<th style="border-bottom-color:${colors[pinned.indexOf(a)%colors.length]}">${a.block_name.substring(0,15)}</th>`);
     html+=`</tr></thead><tbody>`;
@@ -1863,7 +2055,16 @@ function renderCompareContent(pinned){
       charts['ecChart']=new Chart(document.getElementById('ecChart').getContext('2d'),{type:'line',data:{labels:yrs,datasets:eDS},options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:true,position:'bottom'}},scales:{y:{title:{display:true,text:'Energy (MWh)'}}}}});
     }else if(tab==='block'){
       destroyChart('bdChart');
-      charts['bdChart']=new Chart(document.getElementById('bdChart').getContext('2d'),{type:'line',data:{labels:yrs,datasets:pinned.map((a,i)=>({label:a.block_name.substring(0,12),data:ts[i].block_count_cumulative,borderColor:colors[i],backgroundColor:colors[i]+'30',fill:true,tension:0.4,borderWidth:2,pointRadius:2}))},options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:true}},scales:{y:{title:{display:true,text:'Blocks'}}}}});
+      const fsLabels=pinned.map(a=>a.block_name.substring(0,18));
+      const fsDatasets=FIRE_SAFETY_CATEGORIES.map(cat=>({
+        label:cat.label,
+        data:pinned.map(a=>(FIRE_SAFETY_DATA[a.block_name]||{})[cat.key]||0),
+        backgroundColor:cat.color,
+        borderColor:cat.color,
+        borderWidth:0,
+        borderRadius:1,
+      }));
+      charts['bdChart']=new Chart(document.getElementById('bdChart').getContext('2d'),{type:'bar',data:{labels:fsLabels,datasets:fsDatasets},options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,padding:8,font:{size:10}}},tooltip:{mode:'index',callbacks:{title:items=>pinned[items[0].dataIndex].block_name,label:item=>item.dataset.label+': '+(item.raw>0?item.raw.toFixed(1):'—')}}},scales:{x:{stacked:true,ticks:{maxRotation:45,font:{size:11}}},y:{stacked:true,title:{display:true,text:'Fire Safety and Explosion Risk'},min:0,max:10,ticks:{stepSize:2}}}}});
     }else if(tab==='supply'){
       destroyChart('fpChart');
       charts['fpChart']=new Chart(document.getElementById('fpChart').getContext('2d'),{type:'line',data:{labels:yrs,datasets:pinned.map((a,i)=>({label:a.block_name.substring(0,12),data:ts[i].footprint_acres,borderColor:colors[i],backgroundColor:colors[i]+'30',fill:true,tension:0.4,borderWidth:2,pointRadius:2}))},options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},plugins:{legend:{display:true}},scales:{y:{title:{display:true,text:'Acres'}}}}});
@@ -2002,6 +2203,11 @@ document.getElementById('themeToggle').addEventListener('click',()=>{
 
 try{initScatterSelectors()}catch(e){console.error('Scatter init error:',e)}
 try{renderOverview()}catch(e){console.error('Overview render error:',e)}
+
+// Auto-launch guided tour on first visit
+if(!sessionStorage.getItem('tourDismissed')){
+  setTimeout(()=>GuidedTour.start(),800);
+}
 
 </script>
 </body>
